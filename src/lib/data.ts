@@ -16,6 +16,7 @@ import type {
   Membership,
   NfcCard,
   Payment,
+  PaymentMethod,
   Plan,
   Scanner,
   WalkIn,
@@ -26,6 +27,7 @@ import { todayInManila } from './format'
 import { buildMemberRecord, canEnter, type MemberRecord } from './members'
 import { endDateFor, latestRunning, memberAccess, renewalStartFor } from './membership'
 import { savedReference, type PaymentInput } from './payments'
+import { inRange, type Range } from './reports'
 import { isScannerOnline } from './scanners'
 import { useNow } from './useNow'
 
@@ -58,9 +60,9 @@ const initialDb = {
   memberships: mock.memberships,
   payments: mock.payments,
   cards: mock.nfcCards,
-  checkins: mock.checkins,
+  checkins: [...mock.checkins, ...mock.pastCheckins],
   linkRequests: mock.linkRequests,
-  walkIns: mock.walkIns,
+  walkIns: [...mock.walkIns, ...mock.pastWalkIns],
   plans: mock.plans,
   scanners: mock.scanners,
   cardBatches: mock.cardBatches,
@@ -549,6 +551,82 @@ export function addWalkIn(input: {
   }
   update({ walkIns: [walkIn, ...db.walkIns] })
   return walkIn
+}
+
+// ---------- Reports ----------
+
+export interface IncomeRow {
+  kind: 'membership' | 'walkin'
+  at: string
+  name: string
+  plan: string
+  amountCentavos: number
+  method: PaymentMethod
+  reference: string | null
+}
+
+export interface Report {
+  income: IncomeRow[] // oldest first
+  totals: { memberships: number; walkIns: number; total: number; walkInCount: number }
+  checkins: (Checkin & { memberName: string; scannerName: string })[] // oldest first
+}
+
+// Everything that happened at this gym between two Manila dates (inclusive).
+export function useReport(range: Range): Query<Report> {
+  const data = useDb()
+  const { from, to } = range
+  const report = useMemo(() => {
+    const within = (at: string) => inRange(at, { from, to })
+    const nameOf = (id: string | null) =>
+      data.members.find((m) => m.member_id === id)?.full_name ?? 'Unknown card'
+
+    const paid: IncomeRow[] = data.payments
+      .filter((p) => within(p.paid_at))
+      .map((p) => {
+        const membership = data.memberships.find((m) => m.membership_id === p.membership_id)!
+        return {
+          kind: 'membership',
+          at: p.paid_at,
+          name: nameOf(membership.member_id),
+          plan: planName(data, membership.plan_id),
+          amountCentavos: p.amount_centavos,
+          method: p.method,
+          reference: p.reference_no,
+        }
+      })
+    const visits: IncomeRow[] = data.walkIns
+      .filter((w) => within(w.visited_at))
+      .map((w) => ({
+        kind: 'walkin',
+        at: w.visited_at,
+        name: w.guest_name ?? 'Walk-in guest',
+        plan: '',
+        amountCentavos: w.amount_centavos,
+        method: w.method,
+        reference: w.reference_no,
+      }))
+    const sum = (rows: IncomeRow[]) => rows.reduce((total, r) => total + r.amountCentavos, 0)
+
+    return {
+      income: [...paid, ...visits].sort((a, b) => a.at.localeCompare(b.at)),
+      totals: {
+        memberships: sum(paid),
+        walkIns: sum(visits),
+        total: sum(paid) + sum(visits),
+        walkInCount: visits.length,
+      },
+      checkins: data.checkins
+        .filter((c) => within(c.scanned_at))
+        .sort((a, b) => a.scanned_at.localeCompare(b.scanned_at))
+        .map((c) => ({
+          ...c,
+          memberName: nameOf(c.member_id),
+          scannerName:
+            data.scanners.find((s) => s.scanner_id === c.scanner_id)?.scanner_name ?? '',
+        })),
+    }
+  }, [data, from, to])
+  return { data: report, isLoading: false }
 }
 
 // ---------- Development only ----------

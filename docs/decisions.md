@@ -50,3 +50,10 @@ One line per decision, grouped by part.
 - After saving, the form resets for the next guest and shows a confirmation line.
 - The shown time updates live; the saved time is taken at the moment of saving.
 - The default price is a gym setting held in memory (starts at ₱100).
+
+## Part 6: Dashboard
+- Income (dashboard and reports) is shown to owners only, as the plan says staff see limited reports.
+- "Check-ins by hour" counts allowed taps, 5 AM to 10 PM (wider if needed).
+- Charts use one navy color, a readout on hover or tap, and a "Show as table" view.
+- "This month's income" is from the 1st to today, by payment date plus walk-ins.
+- Mock only: 30 days of generated past check-ins and walk-ins.
