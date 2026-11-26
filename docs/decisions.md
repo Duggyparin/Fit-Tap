@@ -57,3 +57,10 @@ One line per decision, grouped by part.
 - Charts use one navy color, a readout on hover or tap, and a "Show as table" view.
 - "This month's income" is from the 1st to today, by payment date plus walk-ins.
 - Mock only: 30 days of generated past check-ins and walk-ins.
+
+## Part 7: Reports
+- "This week" starts on Monday; week and month end today. The default range is "This month".
+- "Members checked in per day" counts unique members; "Peak hours" counts allowed taps.
+- The payments CSV includes walk-ins, with a Type column; amounts are plain pesos with two decimals.
+- CSV cells starting with = + - @ get a leading apostrophe so spreadsheets do not run them as formulas.
+- The expiring list always shows the next 7 days, whatever range is picked.
