@@ -1,0 +1,10 @@
+{
+  "description": "Manage gym members, memberships, NFC check-ins, walk-ins, and payments in one dashboard built for local gym owners and staff in the Philippines.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

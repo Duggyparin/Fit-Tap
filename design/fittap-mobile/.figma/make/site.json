@@ -1,0 +1,10 @@
+{
+  "description": "Manage gym members, memberships, payments, and live NFC check-ins from a phone, helping Philippine gym owners and staff run daily operations with ease.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #14213D;
+  --color-primary: #2563EB;
+  --color-primary-hover: #1D4ED8;
+  --color-success: #16A34A;
+  --color-danger: #DC2626;
+  --color-warning: #F59E0B;
+  --color-muted: #64748B;
+  --color-page: #F7F8FA;
+  --color-card: #FFFFFF;
+  --color-line: #E5E7EB;
+  --color-ink: #111827;
+  --color-ink-muted: #6B7280;
+}
+
+@layer base {
+  body {
+    @apply bg-page text-ink antialiased;
+  }
+
+  /* Tailwind v4 leaves buttons with the arrow cursor. */
+  button:not(:disabled) {
+    cursor: pointer;
+  }
+}
