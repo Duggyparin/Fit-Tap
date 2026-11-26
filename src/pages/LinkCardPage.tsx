@@ -33,7 +33,7 @@ const SUCCESS_MS = 2500
 export default function LinkCardPage() {
   const { id } = useParams()
   const member = useMember(id).data
-  if (!member) {
+  if (!member || member.member.anonymized_at) {
     return (
       <EmptyState
         icon={UserX}

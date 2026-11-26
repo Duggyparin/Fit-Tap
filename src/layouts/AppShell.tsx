@@ -2,6 +2,7 @@ import { Nfc } from 'lucide-react'
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
 import DevRoleSwitch from '../components/DevRoleSwitch'
+import FeedbackLink from '../components/FeedbackLink'
 import BottomNav from '../components/nav/BottomNav'
 import { gymActiveTab, SIDEBAR_ITEMS, TAB_ITEMS } from '../components/nav/navItems'
 import Sidebar from '../components/nav/Sidebar'
@@ -29,6 +30,9 @@ export default function AppShell() {
         icon={Nfc}
         items={SIDEBAR_ITEMS}
         home="/"
+        extra={
+          <FeedbackLink className="flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-card/70 hover:bg-card/10 hover:text-card" />
+        }
       />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Stays visible while scrolling. */}

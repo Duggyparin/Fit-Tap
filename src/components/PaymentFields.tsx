@@ -1,15 +1,20 @@
 import { METHOD_LABEL, needsReference, PAYMENT_CHOICES, type PaymentInput } from '../lib/payments'
 import Field from './Field'
+import QrPayment from './QrPayment'
 
 // Cash / GCash / Maya, plus the reference number for e-wallets.
 export default function PaymentFields({
   value,
   onChange,
   error,
+  qrAmount,
 }: {
   value: PaymentInput
   onChange: (value: PaymentInput) => void
   error?: string | null // problem with the reference number
+  // Given on a gym's own payments (Register, Renew, Walk-in): show the gym's
+  // QR code for GCash and Maya. Leave out for FitTap's own billing.
+  qrAmount?: number | null
 }) {
   return (
     <div className="flex flex-col gap-3">
@@ -37,6 +42,9 @@ export default function PaymentFields({
           ))}
         </div>
       </fieldset>
+      {qrAmount !== undefined && (value.method === 'gcash' || value.method === 'maya') && (
+        <QrPayment method={value.method} amountCentavos={qrAmount} />
+      )}
       {needsReference(value.method) && (
         <Field
           label="Reference number"

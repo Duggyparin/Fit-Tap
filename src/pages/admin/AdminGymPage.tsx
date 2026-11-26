@@ -1,6 +1,7 @@
 import { ArrowLeft, Ban, Circle, CircleCheck, CreditCard, Eye, RotateCcw, Store } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import BillingDialog from '../../components/admin/BillingDialog'
 import GymPaymentDialog from '../../components/admin/GymPaymentDialog'
 import Button from '../../components/Button'
 import ButtonLink from '../../components/ButtonLink'
@@ -13,7 +14,7 @@ import StatusBadge from '../../components/StatusBadge'
 import { reactivateGym, startViewAs, suspendGym, useAdminGym } from '../../lib/adminData'
 import { formatDate, formatPeso } from '../../lib/format'
 import { METHOD_LABEL } from '../../lib/payments'
-import { GRACE_DAYS } from '../../lib/platform'
+import { cyclePrice, GRACE_DAYS } from '../../lib/platform'
 import { GYM_STATUS, SUBSCRIPTION_STATUS } from '../../lib/status'
 import { useOnline } from '../../lib/useOnline'
 
@@ -22,7 +23,7 @@ export default function AdminGymPage() {
   const detail = useAdminGym(id).data
   const online = useOnline()
   const navigate = useNavigate()
-  const [dialog, setDialog] = useState<'pay' | 'suspend' | 'reactivate' | null>(null)
+  const [dialog, setDialog] = useState<'pay' | 'setup' | 'billing' | 'suspend' | 'reactivate' | null>(null)
 
   if (!detail) {
     return (
@@ -89,6 +90,26 @@ export default function AdminGymPage() {
               <dd className="text-lg font-bold">{formatPeso(gym.monthly_fee_centavos)}</dd>
             </div>
             <div>
+              <dt className="text-sm text-ink-muted">Billing</dt>
+              <dd className="text-lg font-bold">
+                {gym.billing_cycle === 'annual'
+                  ? `Annual, ${gym.annual_discount_percent}% off`
+                  : 'Monthly'}
+              </dd>
+              {gym.billing_cycle === 'annual' && (
+                <dd className="text-sm text-ink-muted">{formatPeso(cyclePrice(gym))} per year</dd>
+              )}
+            </div>
+            <div>
+              <dt className="text-sm text-ink-muted">Setup fee (one time)</dt>
+              <dd className="text-lg font-bold">{formatPeso(gym.setup_fee_centavos)}</dd>
+              <dd className="text-sm text-ink-muted">
+                {gym.setup_fee_paid_at
+                  ? `Paid ${formatDate(gym.setup_fee_paid_at)}`
+                  : 'Not paid yet'}
+              </dd>
+            </div>
+            <div>
               <dt className="text-sm text-ink-muted">Next due date</dt>
               <dd className="text-lg font-bold">
                 {gym.next_due_date ? formatDate(gym.next_due_date) : 'Not set'}
@@ -98,6 +119,14 @@ export default function AdminGymPage() {
           <div className="flex flex-col gap-2 px-4 pb-4">
             <Button icon={CreditCard} onClick={() => setDialog('pay')} disabled={!online}>
               Record payment
+            </Button>
+            {!gym.setup_fee_paid_at && (
+              <Button variant="secondary" onClick={() => setDialog('setup')} disabled={!online}>
+                Record setup fee
+              </Button>
+            )}
+            <Button variant="secondary" onClick={() => setDialog('billing')} disabled={!online}>
+              Change billing cycle
             </Button>
             {gym.status === 'suspended' ? (
               <Button
@@ -136,7 +165,7 @@ export default function AdminGymPage() {
                   <div className="min-w-0">
                     <p className="font-medium">{formatDate(p.paid_at)}</p>
                     <p className="text-sm break-all text-ink-muted">
-                      {METHOD_LABEL[p.method]}
+                      {p.kind === 'setup' ? 'Setup fee' : 'Subscription'} · {METHOD_LABEL[p.method]}
                       {p.reference_no && ` · ${p.reference_no}`}
                     </p>
                   </div>
@@ -148,7 +177,14 @@ export default function AdminGymPage() {
         </Panel>
       </div>
 
-      {dialog === 'pay' && <GymPaymentDialog gym={gym} onClose={close} />}
+      {(dialog === 'pay' || dialog === 'setup') && (
+        <GymPaymentDialog
+          gym={gym}
+          kind={dialog === 'setup' ? 'setup' : 'subscription'}
+          onClose={close}
+        />
+      )}
+      {dialog === 'billing' && <BillingDialog gym={gym} onClose={close} />}
       {dialog === 'suspend' && (
         <ConfirmDialog
           title="Suspend gym?"

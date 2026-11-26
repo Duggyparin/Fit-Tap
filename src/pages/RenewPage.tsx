@@ -21,7 +21,9 @@ import type { Membership } from '../types'
 export default function RenewPage() {
   // The chosen member lives in the address: /renew?member=:id
   const [params, setParams] = useSearchParams()
-  const record = useMember(params.get('member') ?? undefined).data
+  const found = useMember(params.get('member') ?? undefined).data
+  // A former (anonymized) member cannot be renewed.
+  const record = found && !found.member.anonymized_at ? found : null
 
   const choose = (id: string | null) =>
     setParams(id ? { member: id } : {}, { replace: true })
@@ -159,6 +161,7 @@ function RenewForm({ record, onChange }: { record: MemberDetail; onChange: () =>
           value={payment}
           onChange={setPayment}
           error={tried ? errors.reference : null}
+          qrAmount={amount}
         />
         <Button type="submit" disabled={!online}>
           Confirm renewal{amount !== null && ` · ${formatPeso(amount)}`}

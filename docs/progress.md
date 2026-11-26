@@ -13,6 +13,9 @@ Frontend build with mock data. All parts are done.
 - [x] Part 9: Final pass (`8e1eb90`)
 - [x] Part 10a: Platform admin: overview, gyms, subscription, owners (`2512119`)
 - [x] Part 10b: Platform admin: scanners, card orders, audit log, view as (`482938d`)
+- [x] Part 11: QR codes, privacy notice, feedback, anonymize member, pricing (roadmap #27, #22, #24, #23 minimal, #3, #1)
+
+Next: schema upgrade (#11, #28 heartbeat, link results, freeze rule).
 
 Decisions are in [decisions.md](decisions.md); database changes still needed are in
 [schema-todo.md](schema-todo.md).

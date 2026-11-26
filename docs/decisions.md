@@ -71,7 +71,7 @@ One line per decision, grouped by part.
 - Plan names must be unique; editing a plan does not change existing memberships.
 - Settings: gym name and walk-in price are editable (in memory); "expiring soon" days are read-only.
 - The Scanners page keeps a fixed row order; elsewhere the default scanner is listed first.
-- Card batch counts come from card rows; "Register batch" is disabled for now.
+- Card batch counts come from card rows ("Register batch" moved to the admin area in Part 10b).
 - "Log out" is at the bottom of the sidebar and of the More screen.
 - Login only checks that an email and password are filled in; nothing is stored and pages are not protected yet.
 - A second mock batch (printing) shows another order status.
@@ -82,9 +82,8 @@ One line per decision, grouped by part.
 - Moving to another page scrolls back to the top.
 - The browser tab title is "FitTap".
 
-## Later (decided by the user, not built yet)
-- "Register batch" and card batch management are for the platform admin only, not gym owners. Gym owners only see the status of their own orders.
-- To change when built: the Card orders page currently shows a disabled "Register batch" button and per-batch card counts to the gym owner.
+## Card batches (decided by the user, built in Part 10b)
+- "Register batch" and card batch management are for the platform admin only. Gym owners see their orders' status and counts.
 
 ## Part 10a: Platform admin (overview, gyms, owners, subscription)
 - A dev-only "Testing as" bar switches between gym owner and platform admin; it is remembered for the browser tab. Production builds have no switch.
@@ -111,8 +110,24 @@ One line per decision, grouped by part.
 - The view ends on "Exit" or on returning to any admin page; a reload also ends it.
 - Opening "View as gym" is written to the audit log.
 
-## Later (platform admin ideas, not built)
+## Later (platform admin ideas, not built and not on the roadmap)
 - Announcements to gym owners.
 - Usage stats per gym (photo storage).
-- Per-gym data export and deletion for the Data Privacy Act.
+- Per-gym data export and deletion for the Data Privacy Act is roadmap #23.
+
+## Other
 - Dates are converted with one reused formatter, because building one per check-in made Reports slow.
+
+## Part 11: QR codes, privacy, feedback, anonymize, pricing
+- Each QR upload, replacement or removal asks for confirmation with a preview; only the real owner can change it (not staff, not "View as gym").
+- QR pictures are kept up to 900 px (PNG, or JPEG if large) so they stay scannable.
+- The gym activity log records QR changes and anonymizations, never a removed person's details. It is shown to the owner on Settings.
+- The privacy contact defaults to the owner's name and email until changed in Settings.
+- The consent tick says the notice was read; the notice opens from a link under it.
+- "Former member #N" uses the last digits of the record ID until members have real numbers.
+- Anonymizing also disables the member's card and cancels pending link requests; it is allowed on a running membership, with a warning.
+- Anonymized members leave the list and search; their profile still shows history, with no actions.
+- Payment reference numbers, card UIDs and dates are kept.
+- Automatic anonymizing runs when the app loads (mock only); the clock starts at the last membership's end date, or at registration if there is none.
+- "Send feedback" is in the sidebar and on More, for gym users only.
+- Placeholder prices: setup fee ₱1,500, annual discount 10% (0 to 50 allowed). Changing the billing cycle keeps the due date; the setup fee changes neither due date nor trial status.

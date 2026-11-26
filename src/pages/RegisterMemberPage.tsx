@@ -7,6 +7,7 @@ import Icon from '../components/Icon'
 import PaymentFields from '../components/PaymentFields'
 import PhotoCapture from '../components/PhotoCapture'
 import PlanPicker from '../components/PlanPicker'
+import PrivacyNoticeDialog from '../components/PrivacyNoticeDialog'
 import { registerMember, useMembers, usePlans } from '../lib/data'
 import { formatDate, formatPeso, todayInManila } from '../lib/format'
 import { formatPhoneInput, isValidPhone } from '../lib/members'
@@ -36,6 +37,7 @@ export default function RegisterMemberPage() {
   )
   const [payment, setPayment] = useState(NEW_PAYMENT)
   const [tried, setTried] = useState(false)
+  const [showNotice, setShowNotice] = useState(false)
 
   const plan = plans.find((p) => p.plan_id === planId)
   const start = todayInManila()
@@ -134,7 +136,12 @@ export default function RegisterMemberPage() {
 
           <div className={SECTION}>
             <PlanPicker plans={plans} value={planId} onChange={setPlanId} />
-            <PaymentFields value={payment} onChange={setPayment} error={show(errors.reference)} />
+            <PaymentFields
+              value={payment}
+              onChange={setPayment}
+              error={show(errors.reference)}
+              qrAmount={plan.price_centavos}
+            />
 
             <dl className="rounded-xl border border-line bg-card p-4 text-sm">
               <div className="flex justify-between gap-3">
@@ -163,10 +170,18 @@ export default function RegisterMemberPage() {
                   className="mt-0.5 size-5 shrink-0 accent-primary"
                 />
                 <span className="text-sm">
-                  The member agrees that the gym stores their name, contact details, photo and
-                  check-in history to manage their membership. They can ask for it to be deleted.
+                  The member has read the privacy notice and agrees that the gym stores their name,
+                  contact details, photo and check-in history to manage their membership. Personal
+                  details are removed 1 year after the membership ends.
                 </span>
               </label>
+              <button
+                type="button"
+                onClick={() => setShowNotice(true)}
+                className="min-h-11 text-sm font-semibold text-primary underline"
+              >
+                Read the privacy notice
+              </button>
               {show(errors.consent) && (
                 <p className="mt-1.5 text-sm font-medium">⚠ {errors.consent}</p>
               )}
@@ -191,6 +206,7 @@ export default function RegisterMemberPage() {
           </Button>
         </div>
       </form>
+      {showNotice && <PrivacyNoticeDialog onClose={() => setShowNotice(false)} />}
     </div>
   )
 }

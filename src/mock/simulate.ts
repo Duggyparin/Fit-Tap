@@ -52,7 +52,8 @@ export function randomCheckin(data: {
   const unknownUid = `04FF${counter.toString(16).toUpperCase().padStart(10, '0')}`
   if (Math.random() < 0.15) return build(null, unknownUid, 'unknown', 'online')
 
-  const member = pick(data.members)
+  // Former (anonymized) members no longer come in.
+  const member = pick(data.members.filter((m) => m.status === 'active'))
   // Prefer the member's active card; otherwise any card they still have.
   const own = data.cards.filter((c) => c.member_id === member.member_id)
   const card = own.find((c) => c.status === 'active') ?? own[0]

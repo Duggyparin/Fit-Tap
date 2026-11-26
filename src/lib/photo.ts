@@ -24,6 +24,23 @@ export function toMemberPhoto(source: CanvasImageSource, width: number, height: 
   return url
 }
 
+// A QR picture must stay sharp enough to scan: keep up to 900 px, as PNG
+// unless that is large.
+export async function qrFromFile(file: File): Promise<string> {
+  const image = await createImageBitmap(file, { imageOrientation: 'from-image' })
+  const scale = Math.min(1, 900 / Math.max(image.width, image.height))
+  const canvas = document.createElement('canvas')
+  canvas.width = Math.round(image.width * scale)
+  canvas.height = Math.round(image.height * scale)
+  const context = canvas.getContext('2d')!
+  context.fillStyle = 'white' // transparent backgrounds would scan badly
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.drawImage(image, 0, 0, canvas.width, canvas.height)
+  image.close()
+  const png = canvas.toDataURL('image/png')
+  return png.length * 0.75 <= 500 * 1024 ? png : canvas.toDataURL('image/jpeg', 0.92)
+}
+
 export async function photoFromFile(file: File): Promise<string> {
   // 'from-image' keeps phone photos the right way up.
   const image = await createImageBitmap(file, { imageOrientation: 'from-image' })

@@ -68,6 +68,7 @@ export default function WalkInPage() {
             value={payment}
             onChange={setPayment}
             error={tried ? errors.reference : null}
+            qrAmount={amount}
           />
           <p className="flex items-center gap-3 rounded-xl border border-line bg-card p-4 text-sm">
             <Icon icon={Clock} className="text-ink-muted" />

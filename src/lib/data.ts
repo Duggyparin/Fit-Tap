@@ -9,6 +9,8 @@ import type {
   AppUser,
   Checkin,
   Gym,
+  GymAuditAction,
+  GymAuditEntry,
   LinkRequest,
   LinkResult,
   Member,
@@ -20,13 +22,15 @@ import type {
   Scanner,
   WalkIn,
 } from '../types'
+import { anonymizeMembers, memberNumber } from './anonymize'
 import { countBatch, type BatchCounts } from './batches'
 import { summarizeCheckins, type CheckinSummary } from './checkins'
 import { LINK_SECONDS, RECENT_TAPS_HOURS } from './constants'
 import { todayInManila } from './format'
 import { buildMemberRecord, canEnter, type MemberRecord } from './members'
 import { endDateFor, latestRunning, memberAccess, renewalStartFor } from './membership'
-import { savedReference, type PaymentInput } from './payments'
+import { METHOD_LABEL, savedReference, type PaymentInput } from './payments'
+import { PRIVACY_VERSION, type PrivacyContact } from './privacy'
 import { inRange, type Range } from './reports'
 import { isScannerOnline } from './scanners'
 import {
@@ -39,6 +43,7 @@ import {
   useAll,
   type Db,
   type GymSettings,
+  type QrMethod,
 } from './store'
 import { useNow } from './useNow'
 
@@ -80,6 +85,7 @@ function scoped(all: Db) {
     plans: mine(all.plans),
     scanners: mine(all.scanners),
     cardBatches: mine(all.cardBatches),
+    gymAuditLog: mine(all.gymAuditLog),
   }
 }
 
@@ -179,6 +185,8 @@ export function useCheckinSummary(): Query<Summary> {
 // Records a check-in made by staff. Returns null (and saves nothing) if the
 // member may not enter today.
 export function addManualCheckin(memberId: string): Checkin | null {
+  const member = db.members.find((m) => m.member_id === memberId)
+  if (member?.status !== 'active') return null
   const access = memberAccess(db.memberships.filter((m) => m.member_id === memberId))
   if (!canEnter(access)) return null
 
@@ -217,8 +225,10 @@ export interface MemberDetail extends MemberRecord {
 export function useMember(id: string | undefined): Query<MemberDetail | null> {
   const data = useDb()
   const detail = useMemo(() => {
-    const record = recordsOf(data).find((r) => r.member.member_id === id)
-    if (!record) return null
+    // Includes anonymized members, whose history can still be read.
+    const found = data.members.find((m) => m.member_id === id)
+    if (!found) return null
+    const record = buildMemberRecord(found, data.memberships, data.plans, data.cards)
     const own = data.memberships
       .filter((m) => m.member_id === id)
       .sort((a, b) => b.start_date.localeCompare(a.start_date))
@@ -296,6 +306,8 @@ export function registerMember(input: NewMember): string {
     email: input.email.trim() || null,
     photo_url: input.photoUrl,
     consent_at: now,
+    consent_version: PRIVACY_VERSION,
+    anonymized_at: null,
     status: 'active',
     created_at: now,
   }
@@ -530,6 +542,81 @@ export function useSettings(): Query<GymSettings> {
   return { data: useDb().settings, isLoading: false }
 }
 
+// Who members contact about their data: from Settings, else the owner.
+export function usePrivacyContact(): Query<PrivacyContact> {
+  const data = useDb()
+  const owner = data.appUsers.find((u) => u.role === 'owner')
+  return {
+    data: data.settings.privacyContact ?? {
+      name: owner?.display_name ?? 'The gym owner',
+      detail: owner?.email ?? 'ask at the front desk',
+    },
+    isLoading: false,
+  }
+}
+
+// ---------- Owner-only actions and the gym's activity log ----------
+
+// The signed-in user is this gym's owner (not the admin viewing it).
+function isRealOwner(): boolean {
+  const user = db.appUsers.find((u) => u.user_id === db.currentUserId)
+  return user?.role === 'owner' && !db.viewGymId
+}
+
+function gymLog(action: GymAuditAction, detail: string): GymAuditEntry[] {
+  const entry: GymAuditEntry = {
+    gym_audit_id: newId(),
+    gym_id: activeGymId(db),
+    actor_user_id: currentUserId(),
+    action,
+    detail,
+    created_at: new Date().toISOString(),
+  }
+  return [entry, ...db.gymAuditLog]
+}
+
+export function useGymActivity(): Query<(GymAuditEntry & { actor: string })[]> {
+  const data = useDb()
+  const all = useAll()
+  const entries = data.gymAuditLog
+    .map((e) => ({
+      ...e,
+      actor: e.actor_user_id
+        ? (all.appUsers.find((u) => u.user_id === e.actor_user_id)?.display_name ?? 'Unknown')
+        : 'Automatic',
+    }))
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+  return { data: entries, isLoading: false }
+}
+
+// Sets, replaces or (with null) removes a payment QR picture. Every change is
+// logged, because a swapped QR code would send money to someone else.
+export function setQrCode(method: QrMethod, image: string | null) {
+  if (!isRealOwner()) return
+  const id = activeGymId(db)
+  const settings = db.settingsByGym[id] ?? DEFAULT_SETTINGS
+  const before = settings.qrCodes[method]
+  if (before === image) return
+  const action = !image ? 'qr_removed' : before ? 'qr_changed' : 'qr_added'
+  update({
+    settingsByGym: {
+      ...db.settingsByGym,
+      [id]: { ...settings, qrCodes: { ...settings.qrCodes, [method]: image } },
+    },
+    gymAuditLog: gymLog(action, `${METHOD_LABEL[method]} QR code`),
+  })
+}
+
+// Removes a member's personal details for good (owner only).
+export function anonymizeMember(memberId: string) {
+  const member = db.members.find((m) => m.member_id === memberId)
+  if (!isRealOwner() || !member || member.anonymized_at) return
+  update({
+    ...anonymizeMembers(db, new Set([memberId])),
+    gymAuditLog: gymLog('member_anonymized', `Member #${memberNumber(memberId)}`),
+  })
+}
+
 // ---------- Walk-ins ----------
 
 export function useTodayWalkIns(): Query<{ walkIns: WalkIn[]; totalCentavos: number }> {
@@ -689,11 +776,25 @@ export function useStaff(): Query<AppUser[]> {
   return { data: users, isLoading: false }
 }
 
-export function saveSettings(input: { gymName: string; walkInCentavos: number }) {
+export function saveSettings(input: {
+  gymName: string
+  walkInCentavos: number
+  privacyContact: PrivacyContact
+}) {
   const id = activeGymId(db)
   update({
     gyms: db.gyms.map((g) => (g.gym_id === id ? { ...g, gym_name: input.gymName.trim() } : g)),
-    settingsByGym: { ...db.settingsByGym, [id]: { walkInCentavos: input.walkInCentavos } },
+    settingsByGym: {
+      ...db.settingsByGym,
+      [id]: {
+        ...(db.settingsByGym[id] ?? DEFAULT_SETTINGS),
+        walkInCentavos: input.walkInCentavos,
+        privacyContact: {
+          name: input.privacyContact.name.trim(),
+          detail: input.privacyContact.detail.trim(),
+        },
+      },
+    },
   })
 }
 

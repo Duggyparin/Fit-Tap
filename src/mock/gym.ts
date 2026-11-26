@@ -13,6 +13,10 @@ export const gym: Gym = {
   status: 'active',
   city: 'Cagayan de Oro',
   monthly_fee_centavos: 150_000,
+  billing_cycle: 'monthly',
+  annual_discount_percent: 10,
+  setup_fee_centavos: 150_000,
+  setup_fee_paid_at: `${daysFromToday(-199)}T02:00:00.000Z`,
   next_due_date: daysFromToday(20),
   created_at: `${daysFromToday(-200)}T01:00:00.000Z`,
 }

@@ -15,6 +15,7 @@ import type {
   Plan,
   Scanner,
 } from '../types'
+import { PRIVACY_VERSION } from '../lib/privacy'
 import { ADMIN_ID } from './appUsers'
 import { GYM_ID } from './gym'
 import { daysFromToday, minutesAgo, mockId, pesos, todayMinutesAgo } from './helpers'
@@ -33,6 +34,8 @@ function gym(
   createdDaysAgo: number,
   fee: number,
   dueInDays: number | null,
+  billing_cycle: Gym['billing_cycle'] = 'monthly',
+  setupPaid = true,
 ): Gym {
   return {
     gym_id,
@@ -45,14 +48,18 @@ function gym(
     created_at: stamp(createdDaysAgo),
     city,
     monthly_fee_centavos: pesos(fee),
+    billing_cycle,
+    annual_discount_percent: 10,
+    setup_fee_centavos: pesos(1500),
+    setup_fee_paid_at: setupPaid ? stamp(createdDaysAgo) : null,
     next_due_date: dueInDays === null ? null : daysFromToday(dueInDays),
   }
 }
 
 export const gyms: Gym[] = [
-  gym(PULSE_ID, 'Pulse Fitness', 'Iligan', 'trial', 12, 1000, null),
+  gym(PULSE_ID, 'Pulse Fitness', 'Iligan', 'trial', 12, 1000, null, 'monthly', false),
   gym(BARRIO_ID, 'Barrio Strength', 'Valencia', 'active', 95, 1200, -4),
-  gym(SUMMIT_ID, 'Summit Gym', 'Malaybalay', 'suspended', 160, 1500, -41),
+  gym(SUMMIT_ID, 'Summit Gym', 'Malaybalay', 'suspended', 160, 1500, -41, 'annual'),
 ]
 
 function owner(n: number, gym_id: string, name: string, email: string, accepted: boolean): AppUser {
@@ -100,6 +107,8 @@ export const members: Member[] = people.map(([n, gym_id, full_name]) => ({
   email: null,
   photo_url: null,
   consent_at: stamp(60),
+  consent_version: PRIVACY_VERSION,
+  anonymized_at: null,
   status: 'active',
   created_at: stamp(60),
 }))
@@ -195,6 +204,7 @@ function paid(n: number, gym_id: string, amount: number, daysAgo: number): GymPa
   return {
     gym_payment_id: mockId(n),
     gym_id,
+    kind: 'subscription',
     amount_centavos: pesos(amount),
     method: 'gcash',
     reference_no: `SUB${n}`,

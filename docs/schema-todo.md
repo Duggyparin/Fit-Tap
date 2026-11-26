@@ -11,7 +11,7 @@ file. Do not edit `schema.sql` in place.
 - [ ] `plan`: plan_id, gym_id, plan_name, duration_days, price_centavos, is_active
 - [ ] `payment`: payment_id, membership_id, amount_centavos, method, reference_no, paid_at, recorded_by
 - [ ] `app_user`: user_id (= Supabase Auth user), gym_id (null only for platform admin), role (owner | staff | platform_admin), display_name, email, is_active
-- [ ] `card_batch`: batch_id, gym_id, quantity, chip_type, design_url, price_centavos, status (requested | printing | shipped | received), ordered_at
+- [ ] `card_batch`: batch_id, gym_id, quantity, chip_type, design_url, price_centavos, status (ordered | printing | shipped | received), ordered_at
 
 ## Changes to existing tables
 
@@ -43,7 +43,7 @@ file. Do not edit `schema.sql` in place.
 
 ## index.ts changes
 
-- [ ] Frozen memberships: if the member's newest membership is frozen, answer `allowed: false, reason: 'frozen'` and save the check-in with result `'frozen'`. Firmware `handleResult()` then needs a "Membership frozen" message.
+- [ ] Frozen memberships (roadmap #15 rule): if the membership **covering today** is frozen, answer `allowed: false, reason: 'frozen'` and save the check-in with result `'frozen'`. Firmware `handleResult()` then needs a "Membership frozen" message.
 - [ ] Use `membership.gym_id` once it exists (today it trusts that the member belongs to the scanner's gym).
 - [ ] Linking a card from stock: also set `assigned_at`.
 - [ ] **Stock cards must count as unknown.** Today any card whose status is not `active` answers `disabled`. Once new cards start as `stock`, tapping an unlinked card would say "Card disabled" and would be missing from "recent unknown taps". Treat `stock` like an unknown card (result `'unknown'`).
@@ -59,7 +59,7 @@ file. Do not edit `schema.sql` in place.
 ### Blocking: these screens cannot work for real without them
 
 - [ ] **Link results never reach the website.** For `already_linked` and `other_gym`, `index.ts` answers only the scanner and leaves the request `pending`, so the website would just time out. Add `link_request.result` (linked | already_linked | other_gym) plus the tapped `card_uid`, and write them in `index.ts`. `src/types.ts` and the mock data already include `result`.
-- [ ] **Scanner "online" needs a heartbeat.** `last_seen_at` is updated only when a card is tapped, so an idle scanner would show "Offline" after 2 minutes (Dashboard, Scanners, Link card warning). The firmware should ping the server about once a minute.
+- [ ] **Scanner heartbeat (roadmap #28).** `last_seen_at` is updated only when a card is tapped, so an idle scanner would show "Offline" after 2 minutes (Dashboard, Scanners, Link card warning, admin alerts). The firmware pings the server every 60 s; the server updates `last_seen_at` and replies whether a link request is pending, so the same ping powers #12 "Tap card to link".
 - [ ] **Other gym's cards are invisible to the website under RLS.** Linking by card number or recent tap needs a database function (RPC) that checks all gyms and answers "belongs to another gym" without exposing the row. Inserting a UID that another gym owns must fail with that message.
 
 ### Data integrity
@@ -87,15 +87,29 @@ file. Do not edit `schema.sql` in place.
 - [ ] New table `audit_log`: audit_id, actor_user_id, action, gym_id, detail, created_at. Insert only (no update or delete), written by the server in the same transaction as the action. Never store tokens in it.
 - [ ] `scanner`: gym_id nullable (stock and repair); add `hardware_status` (in_stock | at_gym | in_repair); rotation replaces `token_hash`; revoking sets status disabled and the check-in function refuses it.
 - [ ] Scanner token creation and rotation must run in a **server-side function**, never in the browser. It returns the token once and stores only its SHA-256 hash. (The website only mocks this.)
-- [ ] `card_batch.status`: ordered | printing | shipped | received (was "requested"). Only admins insert or update batches and register cards; owners read their own.
+- [ ] `card_batch.status`: use the values above. Only admins insert or update batches and register cards; owners read their own.
 - [ ] RLS: platform admins see all gyms; owners and staff only their gym. "View as gym" must be read-only in the database too (for example admins have no write policy on gym tables), because disabled buttons are not security.
 - [ ] Invites need a server-side function (Supabase Auth admin API uses the service key).
 - [ ] Decide what suspension does to a gym: block staff logins, the scanner check-in, or neither.
+
+## Roadmap Part 11 (privacy, QR codes, pricing)
+
+- [ ] `member`: add `consent_version`, `anonymized_at` and a per-gym `member_number`; allow empty phone and photo only for anonymized rows.
+- [ ] Anonymizing (RPC, owner only) in one transaction: clear name, phone, email and photo, delete the photo file from storage, disable cards, cancel link requests, write the gym audit log. Also decide what to do with payment reference numbers.
+- [ ] Scheduled server job: anonymize members 1 year after their last membership ends.
+- [ ] New table `gym_audit_log`: gym_audit_id, gym_id, actor_user_id (null = system), action, detail, created_at. Insert only, written by the server.
+- [ ] Payment QR codes: private storage bucket, paths on `gym`; only the owner may write; log every change on the server.
+- [ ] `gym`: `privacy_contact_name`, `privacy_contact_detail`.
+- [ ] `gym`: `billing_cycle` (monthly | annual), `annual_discount_percent`, `setup_fee_centavos`, `setup_fee_paid_at`. `gym_payment`: `kind` (subscription | setup).
+
+## Freeze rule (roadmap #15, Wave 2)
+
+- [ ] Deny entry only if the membership covering today is frozen; store the freeze reason, who and when; on unfreeze move `end_date` forward by the days frozen (and any queued renewals after it). The website's `memberAccess()` still denies when *any* running membership is frozen: change it with this work.
 
 ## Tooling
 
 - [ ] `supabase/` is excluded from ESLint (it is Deno code, not browser code). Add Deno lint and type checking for it later (`deno lint`, `deno check supabase/functions/checkin/index.ts`).
 
-## Known gaps (not fixing now)
+## Planned with the heartbeat
 
-- **Scanner cannot show "Tap card to link" while waiting.** The firmware only learns about a link request when a card is tapped, so the OLED shows "Card linked" after the tap but nothing before it. A later firmware step can poll for pending requests (or use Supabase Realtime).
+- **Scanner "Tap card to link" (roadmap #12).** Today the firmware only learns about a link request when a card is tapped. The #28 heartbeat reply will tell it a request is pending.

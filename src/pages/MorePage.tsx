@@ -1,5 +1,6 @@
 import { ChevronRight, LogOut } from 'lucide-react'
 import { Link } from 'react-router'
+import FeedbackLink from '../components/FeedbackLink'
 import Icon from '../components/Icon'
 import { LOG_OUT_ITEM, MORE_ITEMS } from '../components/nav/navItems'
 import PageHeader from '../components/PageHeader'
@@ -23,6 +24,7 @@ export default function MorePage() {
           </li>
         ))}
       </ul>
+      <FeedbackLink className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-card px-4 font-medium" />
       <Link
         to={LOG_OUT_ITEM.to}
         className="flex min-h-14 items-center gap-3 rounded-xl border border-line bg-card px-4 font-medium"

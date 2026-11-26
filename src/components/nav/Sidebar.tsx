@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Link, NavLink } from 'react-router'
 import Icon from '../Icon'
 import { LOG_OUT_ITEM, type NavItem } from './navItems'
@@ -10,12 +11,14 @@ export default function Sidebar({
   icon,
   items,
   home,
+  extra,
 }: {
   title: string
   subtitle: string
   icon: LucideIcon
   items: NavItem[]
   home: string // only highlighted on exactly this address
+  extra?: ReactNode // shown above "Log out"
 }) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-navy px-3 py-5 text-card lg:flex">
@@ -54,13 +57,16 @@ export default function Sidebar({
         </ul>
       </nav>
 
-      <Link
-        to={LOG_OUT_ITEM.to}
-        className="mt-auto flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-card/70 hover:bg-card/10 hover:text-card"
-      >
-        <Icon icon={LOG_OUT_ITEM.icon} />
-        {LOG_OUT_ITEM.label}
-      </Link>
+      <div className="mt-auto flex flex-col gap-1">
+        {extra}
+        <Link
+          to={LOG_OUT_ITEM.to}
+          className="flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-card/70 hover:bg-card/10 hover:text-card"
+        >
+          <Icon icon={LOG_OUT_ITEM.icon} />
+          {LOG_OUT_ITEM.label}
+        </Link>
+      </div>
     </aside>
   )
 }

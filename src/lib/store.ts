@@ -3,14 +3,25 @@
 
 import { useSyncExternalStore } from 'react'
 import * as mock from '../mock'
+import type { GymAuditEntry } from '../types'
 import { mockId } from '../mock/helpers'
+import { anonymizeMembers } from './anonymize'
 import { WALK_IN_DEFAULT_CENTAVOS } from './constants'
+import { retentionDue, type PrivacyContact } from './privacy'
+
+export type QrMethod = 'gcash' | 'maya'
 
 export interface GymSettings {
   walkInCentavos: number // default price on the Walk-in form
+  qrCodes: Record<QrMethod, string | null> // the owner's payment QR pictures
+  privacyContact: PrivacyContact | null // null = use the owner's name and email
 }
 
-export const DEFAULT_SETTINGS: GymSettings = { walkInCentavos: WALK_IN_DEFAULT_CENTAVOS }
+export const DEFAULT_SETTINGS: GymSettings = {
+  walkInCentavos: WALK_IN_DEFAULT_CENTAVOS,
+  qrCodes: { gcash: null, maya: null },
+  privacyContact: null,
+}
 
 // Development only: remember which role you are testing across reloads.
 const ROLE_KEY = 'fittap-dev-user'
@@ -44,13 +55,38 @@ const initialDb = {
   cardBatches: [...mock.cardBatches, ...platform.cardBatches],
   gymPayments: platform.gymPayments,
   auditLog: platform.auditLog,
+  gymAuditLog: [] as GymAuditEntry[],
   // Mock only: the real hashes live on the server and never reach the browser.
   scannerTokenHashes: {} as Record<string, string>,
 }
 
 export type Db = typeof initialDb
 
-export let db: Db = initialDb
+// Removes the personal details of members whose retention period has passed.
+// Mock only: for real this must be a scheduled job on the server.
+function applyRetention(data: Db): Db {
+  const due = data.members.filter((m) => retentionDue(m, data.memberships))
+  if (due.length === 0) return data
+  const now = new Date().toISOString()
+  const changed = anonymizeMembers(data, new Set(due.map((m) => m.member_id)), now)
+  return {
+    ...data,
+    ...changed,
+    gymAuditLog: [
+      ...due.map((m, i) => ({
+        gym_audit_id: mockId(950_000 + i),
+        gym_id: m.gym_id,
+        actor_user_id: null,
+        action: 'member_anonymized' as const,
+        detail: `Member #${Number(m.member_id.slice(-12))}: 1 year after the membership ended`,
+        created_at: now,
+      })),
+      ...data.gymAuditLog,
+    ],
+  }
+}
+
+export let db: Db = applyRetention(initialDb)
 const listeners = new Set<() => void>()
 
 function subscribe(listener: () => void) {

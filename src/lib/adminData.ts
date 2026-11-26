@@ -9,10 +9,12 @@ import type {
   AppUser,
   AuditAction,
   AuditEntry,
+  BillingCycle,
   CardBatch,
   CardBatchStatus,
   Gym,
   GymPayment,
+  GymPaymentKind,
   Scanner,
 } from '../types'
 import { countBatch, type BatchCounts, type NewCard } from './batches'
@@ -22,6 +24,7 @@ import { buildMemberRecord, canEnter } from './members'
 import { METHOD_LABEL, savedReference, type PaymentInput } from './payments'
 import {
   addMonth,
+  cycleMonths,
   daysOverdue,
   ONBOARDING_STUCK_DAYS,
   onboardingSteps,
@@ -71,7 +74,8 @@ function summarize(data: Db, gym: Gym): GymSummary {
   const steps = onboardingSteps({
     ownerInvited: owners.length > 0,
     plans: mine(data.plans).some((p) => p.is_active),
-    scannerOnline: mine(data.scanners).some((s) => isScannerOnline(s)),
+    // "At least once", so the tick stays when the scanner goes offline.
+    scannerSeen: mine(data.scanners).some((s) => s.last_seen_at !== null),
     cardLinked: mine(data.cards).some((c) => c.member_id !== null),
     checkin: checkins.length > 0,
   })
@@ -261,6 +265,9 @@ export function addGym(input: {
   name: string
   city: string
   feeCentavos: number
+  setupFeeCentavos: number
+  billingCycle: BillingCycle
+  discountPercent: number
   ownerName: string
   ownerEmail: string
 }): string {
@@ -276,6 +283,10 @@ export function addGym(input: {
     city: input.city.trim(),
     monthly_fee_centavos: input.feeCentavos,
     next_due_date: null,
+    billing_cycle: input.billingCycle,
+    annual_discount_percent: input.discountPercent,
+    setup_fee_centavos: input.setupFeeCentavos,
+    setup_fee_paid_at: null,
   }
   const owner = newOwner(gym.gym_id, input.ownerName, input.ownerEmail)
   commit(
@@ -308,34 +319,63 @@ function changeGym(gymId: string, changes: Partial<Gym>) {
   return db.gyms.map((g) => (g.gym_id === gymId ? { ...g, ...changes } : g))
 }
 
-// A payment settles the current due date and moves it one month on. The first
-// payment of a trial gym starts its subscription today. It does not lift a
-// suspension: that is a separate, deliberate step.
-export function recordGymPayment(gymId: string, amountCentavos: number, payment: PaymentInput) {
+// A subscription payment settles the current due date and moves it one billing
+// cycle on; a trial gym's first one starts its subscription today. The one-time
+// setup fee changes neither. Paying does not lift a suspension: that is a
+// separate, deliberate step.
+export function recordGymPayment(
+  gymId: string,
+  amountCentavos: number,
+  payment: PaymentInput,
+  kind: GymPaymentKind,
+) {
   const gym = db.gyms.find((g) => g.gym_id === gymId)
   if (!gym) return
   const paid: GymPayment = {
     gym_payment_id: newId(),
     gym_id: gymId,
+    kind,
     amount_centavos: amountCentavos,
     method: payment.method,
     reference_no: savedReference(payment),
     paid_at: new Date().toISOString(),
-    covers_due_date: gym.next_due_date,
+    covers_due_date: kind === 'setup' ? null : gym.next_due_date,
     recorded_by: currentUserId(),
   }
   commit(
     {
       gymPayments: [paid, ...db.gymPayments],
-      gyms: changeGym(gymId, {
-        next_due_date: addMonth(gym.next_due_date ?? todayInManila()),
-        status: gym.status === 'trial' ? 'active' : gym.status,
-      }),
+      gyms: changeGym(
+        gymId,
+        kind === 'setup'
+          ? { setup_fee_paid_at: paid.paid_at }
+          : {
+              next_due_date: addMonth(gym.next_due_date ?? todayInManila(), cycleMonths(gym)),
+              status: gym.status === 'trial' ? 'active' : gym.status,
+            },
+      ),
     },
     entry(
       'payment_recorded',
       gymId,
-      `${formatPeso(amountCentavos)} by ${METHOD_LABEL[payment.method]}`,
+      `${kind === 'setup' ? 'Setup fee' : 'Subscription'}: ${formatPeso(amountCentavos)} by ${METHOD_LABEL[payment.method]}`,
+    ),
+  )
+}
+
+// The new cycle and discount apply to the next payment; the due date stays.
+export function setBilling(gymId: string, cycle: BillingCycle, discountPercent: number) {
+  commit(
+    {
+      gyms: changeGym(gymId, {
+        billing_cycle: cycle,
+        annual_discount_percent: discountPercent,
+      }),
+    },
+    entry(
+      'billing_changed',
+      gymId,
+      cycle === 'annual' ? `Annual prepay, ${discountPercent}% discount` : 'Monthly billing',
     ),
   )
 }

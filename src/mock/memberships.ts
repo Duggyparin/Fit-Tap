@@ -47,4 +47,5 @@ export const memberships: Membership[] = [
   membership(313, M.jerome, PLAN.monthly, 29), // starts today: today..today+29
   membership(314, M.andrea, PLAN.annual, 100, 'cancelled'),
   membership(315, M.bea, PLAN.monthly, 9),
+  membership(316, M.ramon, PLAN.monthly, -400),
 ]

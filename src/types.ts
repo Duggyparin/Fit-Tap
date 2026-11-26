@@ -53,6 +53,13 @@ export type AuditAction =
   | 'default_scanner_set'
   | 'batch_registered'
   | 'batch_status_changed'
+  | 'billing_changed'
+
+export type BillingCycle = 'monthly' | 'annual'
+export type GymPaymentKind = 'subscription' | 'setup'
+
+// What a gym's owner or staff did (separate from the platform admin's log).
+export type GymAuditAction = 'qr_added' | 'qr_changed' | 'qr_removed' | 'member_anonymized'
 
 // ---------- Tables ----------
 
@@ -69,11 +76,16 @@ export interface Gym {
   // Subscription to FitTap (what the gym pays the platform).
   monthly_fee_centavos: number
   next_due_date: DateString | null // null while on trial
+  billing_cycle: BillingCycle
+  annual_discount_percent: number // used when billing_cycle is 'annual'
+  setup_fee_centavos: number // one-time
+  setup_fee_paid_at: Timestamp | null
 }
 
 export interface GymPayment {
   gym_payment_id: Uuid
   gym_id: Uuid
+  kind: GymPaymentKind
   amount_centavos: number
   method: PaymentMethod
   reference_no: string | null
@@ -88,6 +100,15 @@ export interface AuditEntry {
   action: AuditAction
   gym_id: Uuid | null
   detail: string // never contains secrets or tokens
+  created_at: Timestamp
+}
+
+export interface GymAuditEntry {
+  gym_audit_id: Uuid
+  gym_id: Uuid
+  actor_user_id: Uuid | null // null = done automatically by the system
+  action: GymAuditAction
+  detail: string // never contains a removed member's personal details
   created_at: Timestamp
 }
 
@@ -122,6 +143,8 @@ export interface Member {
   email: string | null
   photo_url: string | null // required for new members; null only in old/mock data
   consent_at: Timestamp
+  consent_version: string | null // the privacy notice version they accepted
+  anonymized_at: Timestamp | null // personal details removed
   status: MemberStatus
   created_at: Timestamp
 }

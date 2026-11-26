@@ -1,3 +1,4 @@
+import { PRIVACY_VERSION } from '../lib/privacy'
 import type { Member } from '../types'
 import { GYM_ID } from './gym'
 import { daysFromToday, mockId } from './helpers'
@@ -19,6 +20,7 @@ export const M = {
   jerome: mockId(113), // registered today, NO card yet (pending link request)
   andrea: mockId(114), // membership cancelled
   bea: mockId(115), // active, monthly
+  ramon: mockId(116), // ended over a year ago: anonymized automatically
 }
 
 function member(id: string, full_name: string, phone: string, joinedDaysAgo: number, email: string | null = null): Member {
@@ -31,6 +33,8 @@ function member(id: string, full_name: string, phone: string, joinedDaysAgo: num
     email,
     photo_url: null, // no real photos in mock data; the UI shows initials
     consent_at: joined,
+    consent_version: PRIVACY_VERSION,
+    anonymized_at: null,
     status: 'active',
     created_at: joined,
   }
@@ -52,4 +56,5 @@ export const members: Member[] = [
   member(M.jerome, 'Jerome Castillo', '0909 456 1273', 0),
   member(M.andrea, 'Andrea Flores', '0920 885 3367', 265),
   member(M.bea, 'Bea Lopez', '0947 130 9958', 21),
+  member(M.ramon, 'Ramon Villar', '0912 004 5581', 460),
 ]

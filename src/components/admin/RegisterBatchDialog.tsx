@@ -93,9 +93,12 @@ export default function RegisterBatchDialog({ onClose }: { onClose: () => void }
             ))}
           </ul>
         )}
-        <Button variant="secondary" icon={Wand2} onClick={simulate}>
-          Simulate 5 cards
-        </Button>
+        {/* Testing only: real UIDs come from the chips themselves. */}
+        {import.meta.env.DEV && (
+          <Button variant="secondary" icon={Wand2} onClick={simulate}>
+            Simulate 5 cards
+          </Button>
+        )}
         <Button type="submit" disabled={!online}>
           Save as stock
         </Button>
