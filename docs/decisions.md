@@ -81,3 +81,7 @@ One line per decision, grouped by part.
 - Member search matches name, phone or card number everywhere (one rule for Members, Renew and manual check-in).
 - Moving to another page scrolls back to the top.
 - The browser tab title is "FitTap".
+
+## Later (decided by the user, not built yet)
+- "Register batch" and card batch management are for the platform admin only, not gym owners. Gym owners only see the status of their own orders.
+- To change when built: the Card orders page currently shows a disabled "Register batch" button and per-batch card counts to the gym owner.
