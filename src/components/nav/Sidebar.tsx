@@ -1,11 +1,13 @@
 import { Nfc } from 'lucide-react'
 import { NavLink } from 'react-router'
-import { gym } from '../../mock'
+import { useGym } from '../../lib/data'
 import Icon from '../Icon'
 import { SIDEBAR_ITEMS } from './navItems'
 
 // Desktop only (lg and up).
 export default function Sidebar() {
+  const gym = useGym().data
+
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-navy px-3 py-5 text-card lg:flex">
       <div className="flex items-center gap-3 px-3">

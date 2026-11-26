@@ -68,6 +68,18 @@ export function matchesSearch(member: Member, query: string): boolean {
   return digits !== '' && member.phone.replace(/\D/g, '').includes(digits)
 }
 
+// ---------- Philippine mobile numbers: 09XX XXX XXXX ----------
+
+// Formats while typing. Accepts "+63 9..." and turns it into "09...".
+export function formatPhoneInput(value: string): string {
+  const digits = value.replace(/\D/g, '').replace(/^63(?=9)/, '0').slice(0, 11)
+  return [digits.slice(0, 4), digits.slice(4, 7), digits.slice(7)].filter(Boolean).join(' ')
+}
+
+export function isValidPhone(value: string): boolean {
+  return /^09\d{2} \d{3} \d{4}$/.test(value)
+}
+
 // ---------- Filters ----------
 
 export type MemberFilter = 'all' | 'active' | 'expiring' | 'expired' | 'frozen' | 'no-card'

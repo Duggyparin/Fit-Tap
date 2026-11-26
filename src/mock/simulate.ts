@@ -1,14 +1,18 @@
 // Development only: invents a believable tap, like the scanner would send.
-// The result always matches the member's real state in the mock data.
+// The result always matches the member's real state in the current data.
 
 import { memberAccess } from '../lib/membership'
-import type { Checkin, CheckinResult, CheckinSource } from '../types'
+import type {
+  Checkin,
+  CheckinResult,
+  CheckinSource,
+  Member,
+  Membership,
+  NfcCard,
+  Scanner,
+} from '../types'
 import { GYM_ID } from './gym'
 import { mockId } from './helpers'
-import { members } from './members'
-import { memberships } from './memberships'
-import { nfcCards } from './nfcCards'
-import { scanners } from './scanners'
 
 let counter = 900_000 // keeps simulated IDs apart from the fixed mock IDs
 
@@ -16,10 +20,15 @@ function pick<T>(items: T[]): T {
   return items[Math.floor(Math.random() * items.length)]
 }
 
-export function randomCheckin(): Checkin {
+export function randomCheckin(data: {
+  members: Member[]
+  memberships: Membership[]
+  cards: NfcCard[]
+  scanners: Scanner[]
+}): Checkin {
   counter += 1
   const now = new Date().toISOString()
-  const scanner = pick(scanners.filter((s) => s.status === 'active'))
+  const scanner = pick(data.scanners.filter((s) => s.status === 'active'))
 
   function build(
     member_id: string | null,
@@ -43,9 +52,11 @@ export function randomCheckin(): Checkin {
   const unknownUid = `04FF${counter.toString(16).toUpperCase().padStart(10, '0')}`
   if (Math.random() < 0.15) return build(null, unknownUid, 'unknown', 'online')
 
-  const member = pick(members)
-  const card = nfcCards.find((c) => c.member_id === member.member_id)
-  const access = memberAccess(memberships.filter((m) => m.member_id === member.member_id))
+  const member = pick(data.members)
+  // Prefer the member's active card; otherwise any card they still have.
+  const own = data.cards.filter((c) => c.member_id === member.member_id)
+  const card = own.find((c) => c.status === 'active') ?? own[0]
+  const access = memberAccess(data.memberships.filter((m) => m.member_id === member.member_id))
   const canEnter = access === 'active' || access === 'expiring'
 
   // Staff check in some allowed members by hand (forgot or has no card).

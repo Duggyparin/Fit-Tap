@@ -1,11 +1,10 @@
 import { Search } from 'lucide-react'
-import { appUsers, OWNER_ID } from '../../mock'
+import { useCurrentUser } from '../../lib/data'
 import Icon from '../Icon'
 
 // Desktop only (lg and up). The search box does not search yet.
 export default function TopBar() {
-  // Mock signed-in user until login exists.
-  const user = appUsers.find((u) => u.user_id === OWNER_ID)!
+  const user = useCurrentUser().data
   const initials = user.display_name
     .split(' ')
     .map((word) => word[0])

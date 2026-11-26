@@ -2,16 +2,9 @@ import type { ReactNode } from 'react'
 import type { MemberDetail } from '../lib/data'
 import { formatDate, formatPeso, formatTime, todayInManila } from '../lib/format'
 import { membershipState } from '../lib/membership'
-import type { PaymentMethod } from '../types'
+import { METHOD_LABEL } from '../lib/payments'
 import { CheckinBadge, MembershipBadge } from './StatusBadge'
 import Tabs from './Tabs'
-
-const METHOD: Record<PaymentMethod, string> = {
-  cash: 'Cash',
-  gcash: 'GCash',
-  maya: 'Maya',
-  other: 'Other',
-}
 
 function List({ empty, rows }: { empty: string; rows: ReactNode[] }) {
   if (rows.length === 0) return <p className="p-4 text-sm text-ink-muted">{empty}</p>
@@ -69,7 +62,7 @@ export default function MemberHistory({ member }: { member: MemberDetail }) {
               rows={member.payments.map((p) => (
                 <Row
                   key={p.payment_id}
-                  title={`${p.planName} · ${METHOD[p.method]}`}
+                  title={`${p.planName} · ${METHOD_LABEL[p.method]}`}
                   detail={`${formatDate(p.paid_at)}${p.reference_no ? ` · ${p.reference_no}` : ''}`}
                   end={<span className="font-semibold">{formatPeso(p.amount_centavos)}</span>}
                 />
