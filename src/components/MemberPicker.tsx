@@ -1,7 +1,7 @@
 import { SearchX } from 'lucide-react'
 import { useState } from 'react'
 import { useMembers } from '../lib/data'
-import { matchesSearch, sortMembers } from '../lib/members'
+import { matchesRecord, sortMembers } from '../lib/members'
 import DaysLeftBadge from './DaysLeftBadge'
 import EmptyState from './EmptyState'
 import MemberPhoto from './MemberPhoto'
@@ -18,7 +18,7 @@ export default function MemberPicker({
   const members = useMembers()
   const [query, setQuery] = useState('')
   const records = sortMembers(
-    members.data.filter((r) => matchesSearch(r.member, query)),
+    members.data.filter((r) => matchesRecord(r, query)),
     { by: 'name', ascending: true },
   )
 
@@ -27,7 +27,7 @@ export default function MemberPicker({
       <SearchInput
         autoFocus={autoFocus}
         label="Search member"
-        placeholder="Search by name or phone"
+        placeholder="Name, phone, or card number"
         value={query}
         onChange={setQuery}
       />

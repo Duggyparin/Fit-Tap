@@ -1,4 +1,5 @@
-import { Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { Outlet, useLocation } from 'react-router'
 import BottomNav from '../components/nav/BottomNav'
 import Sidebar from '../components/nav/Sidebar'
 import TopBar from '../components/nav/TopBar'
@@ -7,6 +8,12 @@ import OfflineBanner from '../components/OfflineBanner'
 // The frame around every signed-in page. Below lg: page + bottom tabs.
 // From lg: navy sidebar + top bar + page.
 export default function AppShell() {
+  // A new page starts at the top.
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
   return (
     <div className="min-h-dvh lg:flex">
       <Sidebar />

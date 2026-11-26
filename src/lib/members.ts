@@ -68,6 +68,15 @@ export function matchesSearch(member: Member, query: string): boolean {
   return digits !== '' && member.phone.replace(/\D/g, '').includes(digits)
 }
 
+// The member search used everywhere: name, phone or printed card number.
+export function matchesRecord(record: MemberRecord, query: string): boolean {
+  const q = query.trim().toLowerCase()
+  return (
+    matchesSearch(record.member, query) ||
+    Boolean(record.card?.card_number?.toLowerCase().includes(q))
+  )
+}
+
 // ---------- Philippine mobile numbers: 09XX XXX XXXX ----------
 
 // Formats while typing. Accepts "+63 9..." and turns it into "09...".

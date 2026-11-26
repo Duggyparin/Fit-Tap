@@ -31,7 +31,7 @@ export default function ExpiringList() {
           <div className="min-w-0 flex-1">
             <Link
               to={`/members/${record.member.member_id}`}
-              className="block font-semibold hover:underline"
+              className="flex min-h-11 items-center font-semibold hover:underline"
             >
               {record.member.full_name}
             </Link>

@@ -54,6 +54,31 @@ file. Do not edit `schema.sql` in place.
 - [ ] `payment` has no gym_id: either add one, or write its policy through `membership`.
 - [ ] Test: log in as Gym A and try to read Gym B's members.
 
+## Needed by the website screens
+
+### Blocking: these screens cannot work for real without them
+
+- [ ] **Link results never reach the website.** For `already_linked` and `other_gym`, `index.ts` answers only the scanner and leaves the request `pending`, so the website would just time out. Add `link_request.result` (linked | already_linked | other_gym) plus the tapped `card_uid`, and write them in `index.ts`. `src/types.ts` and the mock data already include `result`.
+- [ ] **Scanner "online" needs a heartbeat.** `last_seen_at` is updated only when a card is tapped, so an idle scanner would show "Offline" after 2 minutes (Dashboard, Scanners, Link card warning). The firmware should ping the server about once a minute.
+- [ ] **Other gym's cards are invisible to the website under RLS.** Linking by card number or recent tap needs a database function (RPC) that checks all gyms and answers "belongs to another gym" without exposing the row. Inserting a UID that another gym owns must fail with that message.
+
+### Data integrity
+
+- [ ] One card per member at a time: partial unique index on `nfc_card (member_id)` where status = 'active'.
+- [ ] Link, replace, register (member + membership + payment) and renew (membership + payment) should each be one transaction (RPC), so a dropped connection cannot save half.
+- [ ] Manual check-in: staff may insert only `source = 'manual'` rows, and the server should confirm the membership allows entry.
+- [ ] `nfc_card.card_number`: unique per gym.
+- [ ] `plan`: unique name per gym; keep at least one active plan.
+- [ ] `member.phone`: check the format `09XX XXX XXXX` (or store digits only).
+
+### Settings, photos, roles and reports
+
+- [ ] `gym`: add `walk_in_default_centavos` and `expiring_days` (today: constants and in-memory settings).
+- [ ] Member photos: private storage bucket; store the path in `photo_url` and show it with short-lived signed links.
+- [ ] Income is owner-only in the website; enforce it with RLS on `payment` (and decide what staff may read in `walk_in`, since they record walk-ins and see today's total).
+- [ ] Refuse writes from users with `app_user.is_active = false`.
+- [ ] Indexes for reports: `payment (paid_at)`, `walk_in (gym_id, visited_at)`.
+
 ## Tooling
 
 - [ ] `supabase/` is excluded from ESLint (it is Deno code, not browser code). Add Deno lint and type checking for it later (`deno lint`, `deno check supabase/functions/checkin/index.ts`).

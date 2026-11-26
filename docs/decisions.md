@@ -75,3 +75,9 @@ One line per decision, grouped by part.
 - "Log out" is at the bottom of the sidebar and of the More screen.
 - Login only checks that an email and password are filled in; nothing is stored and pages are not protected yet.
 - A second mock batch (printing) shows another order status.
+
+## Part 9: Final pass
+- The top-bar search opens Members with the search filled in; the search is kept in the address.
+- Member search matches name, phone or card number everywhere (one rule for Members, Renew and manual check-in).
+- Moving to another page scrolls back to the top.
+- The browser tab title is "FitTap".

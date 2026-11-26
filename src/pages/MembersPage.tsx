@@ -1,6 +1,6 @@
 import { Plus, SearchX } from 'lucide-react'
 import { useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import Button from '../components/Button'
 import ButtonLink from '../components/ButtonLink'
 import EmptyState from '../components/EmptyState'
@@ -12,7 +12,7 @@ import SearchInput from '../components/SearchInput'
 import { useMembers } from '../lib/data'
 import {
   matchesMemberFilter,
-  matchesSearch,
+  matchesRecord,
   sortMembers,
   type MemberFilter,
   type MemberSort,
@@ -29,13 +29,17 @@ const FILTERS: { value: MemberFilter; label: string }[] = [
 
 export default function MembersPage() {
   const members = useMembers()
-  const [query, setQuery] = useState('')
+  // The search lives in the address (/members?q=...), so the top bar can set
+  // it and "Back" from a profile keeps it.
+  const [params, setParams] = useSearchParams()
+  const query = params.get('q') ?? ''
+  const setQuery = (q: string) => setParams(q ? { q } : {}, { replace: true })
   const [filter, setFilter] = useState<MemberFilter>('all')
   const [sort, setSort] = useState<MemberSort>({ by: 'name', ascending: true })
 
   const shown = sortMembers(
     members.data.filter(
-      (r) => matchesSearch(r.member, query) && matchesMemberFilter(r, filter),
+      (r) => matchesRecord(r, query) && matchesMemberFilter(r, filter),
     ),
     sort,
   )
@@ -66,7 +70,7 @@ export default function MembersPage() {
 
       <SearchInput
         label="Search members"
-        placeholder="Search by name or phone"
+        placeholder="Name, phone, or card number"
         value={query}
         onChange={setQuery}
       />
