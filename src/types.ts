@@ -16,7 +16,8 @@ export type Timestamp = string // ISO 8601
 
 export type GymStatus = 'trial' | 'active' | 'suspended'
 export type UserRole = 'owner' | 'staff' | 'platform_admin'
-export type ScannerStatus = 'active' | 'disabled'
+export type ScannerStatus = 'active' | 'disabled' // disabled = revoked
+export type HardwareStatus = 'in_stock' | 'at_gym' | 'in_repair'
 export type MemberStatus = 'active' | 'archived'
 export type CardStatus = 'stock' | 'active' | 'lost' | 'disabled'
 
@@ -35,7 +36,23 @@ export type LinkRequestStatus = 'pending' | 'done' | 'expired' | 'cancelled'
 // What the check-in function answers in link mode.
 export type LinkResult = 'linked' | 'already_linked' | 'other_gym'
 
-export type CardBatchStatus = 'requested' | 'printing' | 'shipped' | 'received'
+export type CardBatchStatus = 'ordered' | 'printing' | 'shipped' | 'received'
+
+// Everything the platform admin can do; each one is written to the audit log.
+export type AuditAction =
+  | 'gym_added'
+  | 'owner_invited'
+  | 'invite_resent'
+  | 'payment_recorded'
+  | 'gym_suspended'
+  | 'gym_reactivated'
+  | 'view_as_started'
+  | 'scanner_registered'
+  | 'token_rotated'
+  | 'scanner_revoked'
+  | 'default_scanner_set'
+  | 'batch_registered'
+  | 'batch_status_changed'
 
 // ---------- Tables ----------
 
@@ -48,6 +65,30 @@ export interface Gym {
   timezone: string
   status: GymStatus
   created_at: Timestamp
+  city: string
+  // Subscription to FitTap (what the gym pays the platform).
+  monthly_fee_centavos: number
+  next_due_date: DateString | null // null while on trial
+}
+
+export interface GymPayment {
+  gym_payment_id: Uuid
+  gym_id: Uuid
+  amount_centavos: number
+  method: PaymentMethod
+  reference_no: string | null
+  paid_at: Timestamp
+  covers_due_date: DateString | null // the due date this payment settled
+  recorded_by: Uuid
+}
+
+export interface AuditEntry {
+  audit_id: Uuid
+  actor_user_id: Uuid
+  action: AuditAction
+  gym_id: Uuid | null
+  detail: string // never contains secrets or tokens
+  created_at: Timestamp
 }
 
 export interface AppUser {
@@ -57,16 +98,19 @@ export interface AppUser {
   display_name: string
   email: string
   is_active: boolean
+  invited_at: Timestamp | null
+  accepted_at: Timestamp | null // null = invite not accepted yet
 }
 
 export interface Scanner {
   scanner_id: Uuid
-  gym_id: Uuid
+  gym_id: Uuid | null // null = in stock, not assigned to a gym
   scanner_name: string
   // token_hash is server-only and never sent to the website.
   firmware_version: string | null
   last_seen_at: Timestamp | null
   status: ScannerStatus
+  hardware_status: HardwareStatus
   is_default: boolean // the scanner the Link card page uses automatically
 }
 

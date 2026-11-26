@@ -1,25 +1,37 @@
+import { Nfc } from 'lucide-react'
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router'
+import DevRoleSwitch from '../components/DevRoleSwitch'
 import BottomNav from '../components/nav/BottomNav'
+import { gymActiveTab, SIDEBAR_ITEMS, TAB_ITEMS } from '../components/nav/navItems'
 import Sidebar from '../components/nav/Sidebar'
 import TopBar from '../components/nav/TopBar'
 import OfflineBanner from '../components/OfflineBanner'
+import { useGym } from '../lib/data'
 
 // The frame around every signed-in page. Below lg: page + bottom tabs.
 // From lg: navy sidebar + top bar + page.
 export default function AppShell() {
   // A new page starts at the top.
   const { pathname } = useLocation()
+  const gym = useGym().data
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])
 
   return (
     <div className="min-h-dvh lg:flex">
-      <Sidebar />
+      <Sidebar
+        title="FitTap"
+        subtitle={gym.gym_name}
+        icon={Nfc}
+        items={SIDEBAR_ITEMS}
+        home="/"
+      />
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Stays visible while scrolling. */}
         <div className="sticky top-0 z-10">
+          {import.meta.env.DEV && <DevRoleSwitch />}
           <TopBar />
           <OfflineBanner />
         </div>
@@ -28,7 +40,7 @@ export default function AppShell() {
           <Outlet />
         </main>
       </div>
-      <BottomNav />
+      <BottomNav items={TAB_ITEMS} active={gymActiveTab(pathname)} />
     </div>
   )
 }

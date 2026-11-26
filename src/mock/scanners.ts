@@ -13,6 +13,7 @@ export const scanners: Scanner[] = [
     firmware_version: '1.3.0',
     last_seen_at: minutesAgo(1), // online
     status: 'active',
+    hardware_status: 'at_gym',
     is_default: true,
   },
   {
@@ -22,6 +23,7 @@ export const scanners: Scanner[] = [
     firmware_version: '1.3.0',
     last_seen_at: minutesAgo(180), // offline: last seen 3 hours ago
     status: 'active',
+    hardware_status: 'at_gym',
     is_default: false,
   },
 ]

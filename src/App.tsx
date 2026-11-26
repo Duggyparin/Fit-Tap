@@ -1,5 +1,11 @@
 import { Route, Routes } from 'react-router'
+import { RequireAdmin, RequireGym } from './components/RequireRole'
+import AdminShell from './layouts/AdminShell'
 import AppShell from './layouts/AppShell'
+import AdminGymPage from './pages/admin/AdminGymPage'
+import AdminGymsPage from './pages/admin/AdminGymsPage'
+import AdminOverviewPage from './pages/admin/AdminOverviewPage'
+import AdminOwnersPage from './pages/admin/AdminOwnersPage'
 import CardOrdersPage from './pages/CardOrdersPage'
 import CheckinsPage from './pages/CheckinsPage'
 import HomePage from './pages/HomePage'
@@ -24,24 +30,37 @@ export default function App() {
       {/* Login has no navigation around it. */}
       <Route path="login" element={<LoginPage />} />
 
-      {/* Everything else sits inside the sidebar / bottom tab frame. */}
-      <Route element={<AppShell />}>
-        <Route index element={<HomePage />} />
-        <Route path="checkins" element={<CheckinsPage />} />
-        <Route path="members" element={<MembersPage />} />
-        <Route path="members/new" element={<RegisterMemberPage />} />
-        <Route path="members/:id" element={<MemberProfilePage />} />
-        <Route path="members/:id/link-card" element={<LinkCardPage />} />
-        <Route path="renew" element={<RenewPage />} />
-        <Route path="walk-in" element={<WalkInPage />} />
-        <Route path="reports" element={<ReportsPage />} />
-        <Route path="plans" element={<PlansPage />} />
-        <Route path="scanners" element={<ScannersPage />} />
-        <Route path="more" element={<MorePage />} />
-        <Route path="card-orders" element={<CardOrdersPage />} />
-        <Route path="staff" element={<StaffPage />} />
-        <Route path="settings" element={<SettingsPage />} />
-        <Route path="*" element={<NotFoundPage />} />
+      {/* The platform admin's separate area. */}
+      <Route path="admin" element={<RequireAdmin />}>
+        <Route element={<AdminShell />}>
+          <Route index element={<AdminOverviewPage />} />
+          <Route path="gyms" element={<AdminGymsPage />} />
+          <Route path="gyms/:id" element={<AdminGymPage />} />
+          <Route path="owners" element={<AdminOwnersPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+      </Route>
+
+      {/* A gym's screens, inside the sidebar / bottom tab frame. */}
+      <Route element={<RequireGym />}>
+        <Route element={<AppShell />}>
+          <Route index element={<HomePage />} />
+          <Route path="checkins" element={<CheckinsPage />} />
+          <Route path="members" element={<MembersPage />} />
+          <Route path="members/new" element={<RegisterMemberPage />} />
+          <Route path="members/:id" element={<MemberProfilePage />} />
+          <Route path="members/:id/link-card" element={<LinkCardPage />} />
+          <Route path="renew" element={<RenewPage />} />
+          <Route path="walk-in" element={<WalkInPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="plans" element={<PlansPage />} />
+          <Route path="scanners" element={<ScannersPage />} />
+          <Route path="more" element={<MorePage />} />
+          <Route path="card-orders" element={<CardOrdersPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="settings" element={<SettingsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
       </Route>
     </Routes>
   )

@@ -17,8 +17,9 @@ import {
   WifiOff,
   type LucideIcon,
 } from 'lucide-react'
-import type { CardBatchStatus, CheckinResult, CheckinSource } from '../types'
+import type { CardBatchStatus, CheckinResult, CheckinSource, GymStatus } from '../types'
 import type { MembershipState } from './membership'
+import type { SubscriptionState } from './platform'
 
 export type StatusTone = 'success' | 'danger' | 'warning' | 'muted'
 
@@ -76,10 +77,30 @@ export function accountLook(active: boolean): StatusLook {
 }
 
 export const BATCH_STATUS: Record<CardBatchStatus, StatusLook> = {
-  requested: { tone: 'muted', icon: Clock, label: 'Requested' },
+  ordered: { tone: 'muted', icon: Clock, label: 'Ordered' },
   printing: { tone: 'warning', icon: Printer, label: 'Printing' },
   shipped: { tone: 'warning', icon: Truck, label: 'Shipped' },
   received: { tone: 'success', icon: PackageCheck, label: 'Received' },
+}
+
+export const GYM_STATUS: Record<GymStatus, StatusLook> = {
+  trial: { tone: 'muted', icon: Clock, label: 'Trial' },
+  active: { tone: 'success', icon: CircleCheck, label: 'Active' },
+  suspended: { tone: 'danger', icon: Ban, label: 'Suspended' },
+}
+
+export const SUBSCRIPTION_STATUS: Record<SubscriptionState, StatusLook> = {
+  trial: { tone: 'muted', icon: Clock, label: 'Not billed yet' },
+  paid: { tone: 'success', icon: CircleCheck, label: 'Paid up' },
+  grace: { tone: 'warning', icon: Clock, label: 'Grace period' },
+  overdue: { tone: 'danger', icon: CircleX, label: 'Overdue' },
+  suspended: { tone: 'danger', icon: Ban, label: 'Access suspended' },
+}
+
+export function inviteLook(accepted: boolean): StatusLook {
+  return accepted
+    ? { tone: 'success', icon: CircleCheck, label: 'Joined' }
+    : { tone: 'warning', icon: Clock, label: 'Invited' }
 }
 
 // "offline" taps (a later firmware stage) also come from a scanner.

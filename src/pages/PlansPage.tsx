@@ -4,14 +4,14 @@ import Button from '../components/Button'
 import PageHeader from '../components/PageHeader'
 import PlanDialog from '../components/PlanDialog'
 import Switch from '../components/Switch'
-import { setPlanActive, useCurrentUser, usePlans } from '../lib/data'
+import { setPlanActive, useIsOwner, usePlans } from '../lib/data'
 import { formatPeso } from '../lib/format'
 import { useOnline } from '../lib/useOnline'
 import type { Plan } from '../types'
 
 export default function PlansPage() {
   const plans = usePlans().data
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
   const online = useOnline()
   // undefined = closed, null = adding a new plan
   const [editing, setEditing] = useState<Plan | null | undefined>(undefined)

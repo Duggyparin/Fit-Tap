@@ -1,7 +1,7 @@
 // All mock data in one place, shaped like the database tables (full ERD).
 // Replace these imports with Supabase queries once the backend is connected.
 export { gym, GYM_ID } from './gym'
-export { appUsers, OWNER_ID, STAFF_ID } from './appUsers'
+export { appUsers, OWNER_ID, STAFF_ID, ADMIN_ID } from './appUsers'
 export { scanners, FRONT_DOOR_ID, BACK_DOOR_ID } from './scanners'
 export { plans, PLAN } from './plans'
 export { cardBatches, BATCH_ID } from './cardBatches'
@@ -13,3 +13,4 @@ export { checkins } from './checkins'
 export { linkRequests } from './linkRequests'
 export { walkIns } from './walkIns'
 export { pastCheckins, pastWalkIns } from './history'
+export * as platform from './platform'

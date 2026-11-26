@@ -1,6 +1,6 @@
 import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
-import { setDefaultScanner, useCurrentUser, useScanners } from '../lib/data'
+import { setDefaultScanner, useIsOwner, useScanners } from '../lib/data'
 import { formatAgo } from '../lib/format'
 import { scannerLook } from '../lib/status'
 import { useNow } from '../lib/useNow'
@@ -11,7 +11,7 @@ export default function ScannersPage() {
   const scanners = [...useScanners().data].sort((a, b) =>
     a.scanner.scanner_id.localeCompare(b.scanner.scanner_id),
   )
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
   const online = useOnline()
   const now = useNow(30_000)
 

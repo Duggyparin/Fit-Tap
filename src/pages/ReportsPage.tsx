@@ -7,7 +7,7 @@ import FilterChips from '../components/FilterChips'
 import KpiCard from '../components/KpiCard'
 import Panel from '../components/Panel'
 import { EXPIRING_DAYS } from '../lib/constants'
-import { useCurrentUser, useReport } from '../lib/data'
+import { useIsOwner, useReport } from '../lib/data'
 import { formatDate, formatPeso, formatRange, formatTime } from '../lib/format'
 import { METHOD_LABEL } from '../lib/payments'
 import {
@@ -34,7 +34,7 @@ export default function ReportsPage() {
   const [preset, setPreset] = useState<RangePreset>('month')
   const range = rangeFor(preset)
   const report = useReport(range).data
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
   const { totals } = report
   const days = membersPerDay(report.checkins, range)
   const allowed = report.checkins.filter((c) => c.result === 'allowed').length

@@ -3,13 +3,13 @@ import Button from '../components/Button'
 import EmptyState from '../components/EmptyState'
 import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
-import { useCardBatches, useCurrentUser } from '../lib/data'
+import { useCardBatches, useIsOwner } from '../lib/data'
 import { formatDate, formatPeso } from '../lib/format'
 import { BATCH_STATUS } from '../lib/status'
 
 export default function CardOrdersPage() {
   const batches = useCardBatches().data
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">

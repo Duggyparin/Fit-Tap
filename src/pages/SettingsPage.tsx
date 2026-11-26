@@ -5,14 +5,14 @@ import Field from '../components/Field'
 import Icon from '../components/Icon'
 import PageHeader from '../components/PageHeader'
 import { EXPIRING_DAYS } from '../lib/constants'
-import { saveSettings, useCurrentUser, useGym, useSettings } from '../lib/data'
+import { saveSettings, useIsOwner, useGym, useSettings } from '../lib/data'
 import { parsePesos } from '../lib/payments'
 import { useOnline } from '../lib/useOnline'
 
 export default function SettingsPage() {
   const gym = useGym().data
   const settings = useSettings().data
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
   const online = useOnline()
 
   const [gymName, setGymName] = useState(gym.gym_name)

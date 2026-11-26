@@ -57,5 +57,15 @@ export const SIDEBAR_ITEMS: NavItem[] = [
 // Phone bottom bar.
 export const TAB_ITEMS: NavItem[] = [checkins, members, renew, walkIn, more]
 
+// Which gym tab to highlight for an address.
+export function gymActiveTab(pathname: string): string | undefined {
+  // On a phone the home page ("/") shows Check-ins.
+  if (pathname === '/') return '/checkins'
+  const inSection = (to: string) => pathname === to || pathname.startsWith(`${to}/`)
+  // Pages opened from the More screen keep "More" highlighted.
+  if (MORE_ITEMS.some((item) => inSection(item.to))) return '/more'
+  return TAB_ITEMS.find((item) => inSection(item.to))?.to
+}
+
 // The pages listed on the phone's More screen.
 export const MORE_ITEMS: NavItem[] = [reports, plans, scanners, cardOrders, staff, settings]

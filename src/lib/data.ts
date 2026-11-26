@@ -2,9 +2,8 @@
 // in-memory copy of the mock data; later these hooks and actions will talk to
 // Supabase and keep the same shape, so the pages do not need to change.
 
-import { useMemo, useSyncExternalStore } from 'react'
+import { useMemo } from 'react'
 import * as mock from '../mock'
-import { mockId } from '../mock/helpers'
 import { randomCheckin } from '../mock/simulate'
 import type {
   AppUser,
@@ -23,13 +22,24 @@ import type {
   WalkIn,
 } from '../types'
 import { summarizeCheckins, type CheckinSummary } from './checkins'
-import { LINK_SECONDS, RECENT_TAPS_HOURS, WALK_IN_DEFAULT_CENTAVOS } from './constants'
+import { LINK_SECONDS, RECENT_TAPS_HOURS } from './constants'
 import { todayInManila } from './format'
 import { buildMemberRecord, canEnter, type MemberRecord } from './members'
 import { endDateFor, latestRunning, memberAccess, renewalStartFor } from './membership'
 import { savedReference, type PaymentInput } from './payments'
 import { inRange, type Range } from './reports'
 import { isScannerOnline } from './scanners'
+import {
+  activeGymId,
+  currentUserId,
+  db,
+  DEFAULT_SETTINGS,
+  newId,
+  update,
+  useAll,
+  type Db,
+  type GymSettings,
+} from './store'
 import { useNow } from './useNow'
 
 // Every hook returns this. Mock data is instant, so isLoading is always false.
@@ -45,58 +55,42 @@ export interface CheckinView {
   scannerName: string | null // null = manual check-in
 }
 
-// ---------- In-memory store (resets when the page reloads) ----------
+// ---------- The gym whose screens are open ----------
 
-export interface GymSettings {
-  walkInCentavos: number // default price on the Walk-in form
+// Gym screens only ever see one gym: the signed-in user's, or the one the
+// platform admin is viewing. (Row Level Security must enforce this for real.)
+// cards stay unfiltered so "belongs to another gym" can be detected.
+function scoped(all: Db) {
+  const id = activeGymId(all)
+  const mine = <T extends { gym_id: string | null }>(rows: T[]) =>
+    rows.filter((r) => r.gym_id === id)
+  const memberships = mine(all.memberships)
+  const sold = new Set(memberships.map((m) => m.membership_id))
+  return {
+    ...all,
+    gym: all.gyms.find((g) => g.gym_id === id)!,
+    settings: all.settingsByGym[id] ?? DEFAULT_SETTINGS,
+    appUsers: mine(all.appUsers),
+    members: mine(all.members),
+    memberships,
+    payments: all.payments.filter((p) => sold.has(p.membership_id)),
+    checkins: mine(all.checkins),
+    linkRequests: mine(all.linkRequests),
+    walkIns: mine(all.walkIns),
+    plans: mine(all.plans),
+    scanners: mine(all.scanners),
+    cardBatches: mine(all.cardBatches),
+  }
 }
 
-const settings: GymSettings = { walkInCentavos: WALK_IN_DEFAULT_CENTAVOS }
+type GymView = ReturnType<typeof scoped>
+const views = new WeakMap<Db, GymView>()
 
-const initialDb = {
-  settings,
-  gym: mock.gym,
-  appUsers: mock.appUsers,
-  members: mock.members,
-  memberships: mock.memberships,
-  payments: mock.payments,
-  cards: mock.nfcCards,
-  checkins: [...mock.checkins, ...mock.pastCheckins],
-  linkRequests: mock.linkRequests,
-  walkIns: [...mock.walkIns, ...mock.pastWalkIns],
-  plans: mock.plans,
-  scanners: mock.scanners,
-  cardBatches: mock.cardBatches,
-}
-
-type Db = typeof initialDb
-
-let db: Db = initialDb
-const listeners = new Set<() => void>()
-
-function subscribe(listener: () => void) {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
-}
-
-function update(changes: Partial<Db>) {
-  db = { ...db, ...changes }
-  listeners.forEach((listener) => listener())
-}
-
-function useDb(): Db {
-  return useSyncExternalStore(subscribe, () => db)
-}
-
-let idCount = 800_000 // keeps new IDs apart from the fixed mock IDs
-function newId() {
-  idCount += 1
-  return mockId(idCount)
-}
-
-// Until login exists, the owner is the signed-in user.
-function currentUserId() {
-  return mock.OWNER_ID
+function useDb(): GymView {
+  const all = useAll()
+  let view = views.get(all)
+  if (!view) views.set(all, (view = scoped(all)))
+  return view
 }
 
 // ---------- Helpers ----------
@@ -109,13 +103,13 @@ function newestFirst(a: Checkin, b: Checkin): number {
   return b.scanned_at.localeCompare(a.scanned_at)
 }
 
-function recordsOf(data: Db): MemberRecord[] {
+function recordsOf(data: GymView): MemberRecord[] {
   return data.members
     .filter((m) => m.gym_id === data.gym.gym_id && m.status === 'active')
     .map((m) => buildMemberRecord(m, data.memberships, data.plans, data.cards))
 }
 
-function planName(data: Db, planId: string): string {
+function planName(data: GymView, planId: string): string {
   return data.plans.find((p) => p.plan_id === planId)?.plan_name ?? 'Unknown plan'
 }
 
@@ -126,8 +120,21 @@ export function useGym(): Query<Gym> {
 }
 
 export function useCurrentUser(): Query<AppUser> {
-  const users = useDb().appUsers
-  return { data: users.find((u) => u.user_id === currentUserId())!, isLoading: false }
+  const all = useAll()
+  return { data: all.appUsers.find((u) => u.user_id === all.currentUserId)!, isLoading: false }
+}
+
+// Owner-only parts. While the admin views a gym, show what its owner would see.
+export function useIsOwner(): boolean {
+  const all = useAll()
+  const role = all.appUsers.find((u) => u.user_id === all.currentUserId)?.role
+  return role === 'owner' || all.viewGymId !== null
+}
+
+// The gym the platform admin is viewing read-only, or null.
+export function useViewingGym(): Gym | null {
+  const all = useAll()
+  return all.gyms.find((g) => g.gym_id === all.viewGymId) ?? null
 }
 
 // ---------- Check-ins ----------
@@ -178,7 +185,7 @@ export function addManualCheckin(memberId: string): Checkin | null {
   const now = new Date().toISOString()
   const checkin: Checkin = {
     checkin_id: newId(),
-    gym_id: db.gym.gym_id,
+    gym_id: activeGymId(db),
     member_id: memberId,
     scanner_id: null,
     card_uid: null,
@@ -247,7 +254,7 @@ function sale(
 ) {
   const membership: Membership = {
     membership_id: newId(),
-    gym_id: db.gym.gym_id,
+    gym_id: activeGymId(db),
     member_id: memberId,
     plan_id: plan.plan_id,
     start_date: start,
@@ -283,7 +290,7 @@ export function registerMember(input: NewMember): string {
   const now = new Date().toISOString()
   const member: Member = {
     member_id: newId(),
-    gym_id: db.gym.gym_id,
+    gym_id: activeGymId(db),
     full_name: input.fullName.trim(),
     phone: input.phone,
     email: input.email.trim() || null,
@@ -367,7 +374,7 @@ export function startLinkRequest(memberId: string, scannerId: string): LinkReque
 
   const request: LinkRequest = {
     request_id: newId(),
-    gym_id: db.gym.gym_id,
+    gym_id: activeGymId(db),
     scanner_id: scannerId,
     member_id: memberId,
     requested_by: currentUserId(),
@@ -412,7 +419,7 @@ function assignCard(memberId: string, uid: string) {
           ...db.cards,
           {
             card_id: newId(),
-            gym_id: db.gym.gym_id,
+            gym_id: activeGymId(db),
             batch_id: null,
             card_uid: uid,
             card_number: null,
@@ -425,7 +432,7 @@ function assignCard(memberId: string, uid: string) {
 // Why this card cannot go to this member, or null if it can.
 function cardProblem(card: NfcCard | undefined, memberId: string): string | null {
   if (!card) return null
-  if (card.gym_id !== db.gym.gym_id) return 'This card belongs to another gym.'
+  if (card.gym_id !== activeGymId(db)) return 'This card belongs to another gym.'
   if (card.status === 'lost') return 'This card was marked lost and cannot be used.'
   if (card.status === 'disabled') return 'This card is disabled and cannot be used.'
   if (card.member_id === memberId) return 'This card is already linked to this member.'
@@ -448,7 +455,9 @@ export function linkCardByUid(memberId: string, uid: string): string | null {
 
 export function linkCardByNumber(memberId: string, number: string): string | null {
   const wanted = number.trim().toUpperCase()
-  const card = db.cards.find((c) => c.card_number?.toUpperCase() === wanted)
+  const matches = db.cards.filter((c) => c.card_number?.toUpperCase() === wanted)
+  // Numbers can repeat between gyms: prefer this gym's card.
+  const card = matches.find((c) => c.gym_id === activeGymId(db)) ?? matches[0]
   if (!card) return `No card with the number ${wanted} was found.`
   return cardProblem(card, memberId) ?? linkCardByUid(memberId, card.card_uid)
 }
@@ -490,7 +499,7 @@ export function simulateLinkTap(requestId: string, result: LinkResult) {
     setRequest(requestId, { result })
     return
   }
-  const stock = db.cards.find((c) => c.gym_id === db.gym.gym_id && c.status === 'stock')
+  const stock = db.cards.find((c) => c.gym_id === activeGymId(db) && c.status === 'stock')
   const uid = stock?.card_uid ?? `04AA${newId().slice(-10)}`
   assignCard(request.member_id, uid)
   setRequest(requestId, { status: 'done', card_uid: uid, result })
@@ -542,7 +551,7 @@ export function addWalkIn(input: {
 }): WalkIn {
   const walkIn: WalkIn = {
     walkin_id: newId(),
-    gym_id: db.gym.gym_id,
+    gym_id: activeGymId(db),
     guest_name: input.guestName.trim() || null,
     amount_centavos: input.amountCentavos,
     method: input.payment.method,
@@ -649,7 +658,7 @@ export function savePlan(input: PlanInput, planId?: string) {
   update({
     plans: planId
       ? db.plans.map((p) => (p.plan_id === planId ? { ...p, ...fields } : p))
-      : [...db.plans, { plan_id: newId(), gym_id: db.gym.gym_id, is_active: true, ...fields }],
+      : [...db.plans, { plan_id: newId(), gym_id: activeGymId(db), is_active: true, ...fields }],
   })
 }
 
@@ -663,9 +672,10 @@ export function setPlanActive(planId: string, active: boolean) {
 // ---------- Scanners, staff and settings ----------
 
 export function setDefaultScanner(scannerId: string) {
+  const gym = db.scanners.find((s) => s.scanner_id === scannerId)?.gym_id
   update({
     scanners: db.scanners.map((s) =>
-      s.gym_id === db.gym.gym_id ? { ...s, is_default: s.scanner_id === scannerId } : s,
+      s.gym_id === gym ? { ...s, is_default: s.scanner_id === scannerId } : s,
     ),
   })
 }
@@ -680,9 +690,10 @@ export function useStaff(): Query<AppUser[]> {
 }
 
 export function saveSettings(input: { gymName: string; walkInCentavos: number }) {
+  const id = activeGymId(db)
   update({
-    gym: { ...db.gym, gym_name: input.gymName.trim() },
-    settings: { ...db.settings, walkInCentavos: input.walkInCentavos },
+    gyms: db.gyms.map((g) => (g.gym_id === id ? { ...g, gym_name: input.gymName.trim() } : g)),
+    settingsByGym: { ...db.settingsByGym, [id]: { walkInCentavos: input.walkInCentavos } },
   })
 }
 
@@ -724,7 +735,7 @@ export function useCardBatches(): Query<BatchView[]> {
 // Call these only behind `import.meta.env.DEV`, so production builds drop them.
 
 export function simulateTap() {
-  update({ checkins: [randomCheckin(db), ...db.checkins] })
+  update({ checkins: [randomCheckin(scoped(db)), ...db.checkins] })
 }
 
 export function clearCheckins() {

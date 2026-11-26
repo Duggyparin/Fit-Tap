@@ -31,13 +31,13 @@ export default function RegisterMemberPage() {
   const [planId, setPlanId] = useState(
     () => {
       const active = plans.filter((p) => p.is_active)
-      return (active.find((p) => p.duration_days === 30) ?? active[0]).plan_id
+      return (active.find((p) => p.duration_days === 30) ?? active[0])?.plan_id ?? ''
     },
   )
   const [payment, setPayment] = useState(NEW_PAYMENT)
   const [tried, setTried] = useState(false)
 
-  const plan = plans.find((p) => p.plan_id === planId)!
+  const plan = plans.find((p) => p.plan_id === planId)
   const start = todayInManila()
   const errors = {
     fullName: fullName.trim().length < 2 ? 'Enter the member’s full name.' : null,
@@ -53,7 +53,7 @@ export default function RegisterMemberPage() {
   const sameNumber = isValidPhone(phone) && members.find((r) => r.member.phone === phone)
 
   function save(thenLinkCard: boolean) {
-    if (!online) return
+    if (!online || !plan) return
     if (invalid) {
       setTried(true)
       // Wait for the error messages to appear, then go to the first problem.
@@ -74,6 +74,10 @@ export default function RegisterMemberPage() {
   function onSubmit(event: FormEvent) {
     event.preventDefault()
     save(true)
+  }
+
+  if (!plan) {
+    return <p className="text-sm">There are no active plans. Add one on the Plans page first.</p>
   }
 
   return (

@@ -1,34 +1,43 @@
-import { Nfc } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { Link, NavLink } from 'react-router'
-import { useGym } from '../../lib/data'
 import Icon from '../Icon'
-import { LOG_OUT_ITEM, SIDEBAR_ITEMS } from './navItems'
+import { LOG_OUT_ITEM, type NavItem } from './navItems'
 
-// Desktop only (lg and up).
-export default function Sidebar() {
-  const gym = useGym().data
-
+// Desktop only (lg and up). Used by the gym and the admin layouts.
+export default function Sidebar({
+  title,
+  subtitle,
+  icon,
+  items,
+  home,
+}: {
+  title: string
+  subtitle: string
+  icon: LucideIcon
+  items: NavItem[]
+  home: string // only highlighted on exactly this address
+}) {
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-6 overflow-y-auto bg-navy px-3 py-5 text-card lg:flex">
       <div className="flex items-center gap-3 px-3">
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card/10">
-          <Icon icon={Nfc} />
+          <Icon icon={icon} />
         </span>
         <div className="min-w-0">
-          <p className="text-lg leading-tight font-bold">FitTap</p>
-          <p className="truncate text-xs text-card/70" title={gym.gym_name}>
-            {gym.gym_name}
+          <p className="text-lg leading-tight font-bold">{title}</p>
+          <p className="truncate text-xs text-card/70" title={subtitle}>
+            {subtitle}
           </p>
         </div>
       </div>
 
       <nav aria-label="Main">
         <ul className="flex flex-col gap-1">
-          {SIDEBAR_ITEMS.map((item) => (
+          {items.map((item) => (
             <li key={item.to}>
               <NavLink
                 to={item.to}
-                end={item.to === '/'}
+                end={item.to === home}
                 className={({ isActive }) =>
                   `flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium ${
                     isActive

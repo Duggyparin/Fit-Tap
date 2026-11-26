@@ -11,7 +11,7 @@ import StatusBadge from '../components/StatusBadge'
 import { EXPIRING_DAYS } from '../lib/constants'
 import {
   useCheckinSummary,
-  useCurrentUser,
+  useIsOwner,
   useReport,
   useScanners,
   useTodayCheckins,
@@ -36,7 +36,7 @@ export default function DashboardPage() {
   const today = useTodayCheckins().data
   const scanners = useScanners().data
   const month = useReport(rangeFor('month')).data
-  const isOwner = useCurrentUser().data.role === 'owner'
+  const isOwner = useIsOwner()
   const hours = checkinsByHour(today.map((v) => v.checkin))
 
   return (

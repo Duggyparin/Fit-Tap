@@ -85,3 +85,16 @@ One line per decision, grouped by part.
 ## Later (decided by the user, not built yet)
 - "Register batch" and card batch management are for the platform admin only, not gym owners. Gym owners only see the status of their own orders.
 - To change when built: the Card orders page currently shows a disabled "Register batch" button and per-batch card counts to the gym owner.
+
+## Part 10a: Platform admin (overview, gyms, owners, subscription)
+- A dev-only "Testing as" bar switches between gym owner and platform admin; it is remembered for the browser tab. Production builds have no switch.
+- Non-admins get "Page not found" on /admin; admins are sent to /admin from gym screens. These guards only hide screens.
+- Admin data lives in `src/lib/adminData.ts`; the shared in-memory store moved to `src/lib/store.ts`.
+- Gym screens only see one gym's rows (the owner's, or the one being viewed).
+- Subscription state comes from the due date: paid, grace (1-7 days late), overdue (more than 7).
+- "Suspend" is offered only after the grace period. Paying does not lift a suspension; "Reactivate" does.
+- A payment moves the due date one month on; a trial gym's first payment starts its subscription that day and makes it active.
+- "Stuck in onboarding" = on trial for 7 days or more with checklist steps left.
+- Offline-scanner counts and scanner/quiet alerts ignore suspended gyms. "Overdue gyms" includes suspended ones that still owe.
+- Card batch status "requested" is renamed "ordered".
+- An email can belong to only one account.
