@@ -7,7 +7,6 @@ import * as mock from '../mock'
 import { randomCheckin } from '../mock/simulate'
 import type {
   AppUser,
-  CardBatch,
   Checkin,
   Gym,
   LinkRequest,
@@ -21,6 +20,7 @@ import type {
   Scanner,
   WalkIn,
 } from '../types'
+import { countBatch, type BatchCounts } from './batches'
 import { summarizeCheckins, type CheckinSummary } from './checkins'
 import { LINK_SECONDS, RECENT_TAPS_HOURS } from './constants'
 import { todayInManila } from './format'
@@ -699,33 +699,14 @@ export function saveSettings(input: { gymName: string; walkInCentavos: number })
 
 // ---------- Card orders ----------
 
-export interface BatchView {
-  batch: CardBatch
-  registered: number // card UIDs saved for this batch
-  inStock: number
-  linked: number
-  blocked: number // lost or disabled
-}
-
-export function useCardBatches(): Query<BatchView[]> {
+export function useCardBatches(): Query<BatchCounts[]> {
   const data = useDb()
   const views = useMemo(
     () =>
       data.cardBatches
         .filter((b) => b.gym_id === data.gym.gym_id)
         .sort((a, b) => b.ordered_at.localeCompare(a.ordered_at))
-        .map((batch) => {
-          const cards = data.cards.filter((c) => c.batch_id === batch.batch_id)
-          const count = (...status: string[]) =>
-            cards.filter((c) => status.includes(c.status)).length
-          return {
-            batch,
-            registered: cards.length,
-            inStock: count('stock'),
-            linked: count('active'),
-            blocked: count('lost', 'disabled'),
-          }
-        }),
+        .map((batch) => countBatch(batch, data.cards)),
     [data],
   )
   return { data: views, isLoading: false }

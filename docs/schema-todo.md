@@ -79,6 +79,19 @@ file. Do not edit `schema.sql` in place.
 - [ ] Refuse writes from users with `app_user.is_active = false`.
 - [ ] Indexes for reports: `payment (paid_at)`, `walk_in (gym_id, visited_at)`.
 
+## Platform admin (Part 10)
+
+- [ ] `app_user`: role `platform_admin` (gym_id null); add `invited_at`, `accepted_at`; email unique.
+- [ ] `gym`: add `city`, `monthly_fee_centavos`, `next_due_date`; status stays trial | active | suspended (grace and overdue are derived from the due date).
+- [ ] New table `gym_payment`: gym_payment_id, gym_id, amount_centavos, method, reference_no, paid_at, covers_due_date, recorded_by.
+- [ ] New table `audit_log`: audit_id, actor_user_id, action, gym_id, detail, created_at. Insert only (no update or delete), written by the server in the same transaction as the action. Never store tokens in it.
+- [ ] `scanner`: gym_id nullable (stock and repair); add `hardware_status` (in_stock | at_gym | in_repair); rotation replaces `token_hash`; revoking sets status disabled and the check-in function refuses it.
+- [ ] Scanner token creation and rotation must run in a **server-side function**, never in the browser. It returns the token once and stores only its SHA-256 hash. (The website only mocks this.)
+- [ ] `card_batch.status`: ordered | printing | shipped | received (was "requested"). Only admins insert or update batches and register cards; owners read their own.
+- [ ] RLS: platform admins see all gyms; owners and staff only their gym. "View as gym" must be read-only in the database too (for example admins have no write policy on gym tables), because disabled buttons are not security.
+- [ ] Invites need a server-side function (Supabase Auth admin API uses the service key).
+- [ ] Decide what suspension does to a gym: block staff logins, the scanner check-in, or neither.
+
 ## Tooling
 
 - [ ] `supabase/` is excluded from ESLint (it is Deno code, not browser code). Add Deno lint and type checking for it later (`deno lint`, `deno check supabase/functions/checkin/index.ts`).

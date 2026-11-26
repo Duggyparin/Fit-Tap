@@ -2,10 +2,14 @@ import { Route, Routes } from 'react-router'
 import { RequireAdmin, RequireGym } from './components/RequireRole'
 import AdminShell from './layouts/AdminShell'
 import AppShell from './layouts/AppShell'
+import AdminAuditPage from './pages/admin/AdminAuditPage'
+import AdminCardOrdersPage from './pages/admin/AdminCardOrdersPage'
 import AdminGymPage from './pages/admin/AdminGymPage'
 import AdminGymsPage from './pages/admin/AdminGymsPage'
+import AdminMorePage from './pages/admin/AdminMorePage'
 import AdminOverviewPage from './pages/admin/AdminOverviewPage'
 import AdminOwnersPage from './pages/admin/AdminOwnersPage'
+import AdminScannersPage from './pages/admin/AdminScannersPage'
 import CardOrdersPage from './pages/CardOrdersPage'
 import CheckinsPage from './pages/CheckinsPage'
 import HomePage from './pages/HomePage'
@@ -37,6 +41,10 @@ export default function App() {
           <Route path="gyms" element={<AdminGymsPage />} />
           <Route path="gyms/:id" element={<AdminGymPage />} />
           <Route path="owners" element={<AdminOwnersPage />} />
+          <Route path="scanners" element={<AdminScannersPage />} />
+          <Route path="card-orders" element={<AdminCardOrdersPage />} />
+          <Route path="audit" element={<AdminAuditPage />} />
+          <Route path="more" element={<AdminMorePage />} />
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Route>

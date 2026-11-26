@@ -1,12 +1,28 @@
 // Rules for the platform admin: subscriptions, onboarding and alerts.
 
-import type { DateString, Gym } from '../types'
+import type { AuditAction, DateString, Gym } from '../types'
 import { daysLeft, todayInManila } from './format'
 
 export const GRACE_DAYS = 7 // days after the due date before suspension is offered
 export const SCANNER_ALERT_MINUTES = 30
 export const QUIET_DAYS = 3 // "no check-ins for 3+ days"
 export const ONBOARDING_STUCK_DAYS = 7 // still on trial and not finished
+
+export const ACTION_LABEL: Record<AuditAction, string> = {
+  gym_added: 'Gym added',
+  owner_invited: 'Owner invited',
+  invite_resent: 'Invite resent',
+  payment_recorded: 'Payment recorded',
+  gym_suspended: 'Gym suspended',
+  gym_reactivated: 'Gym reactivated',
+  view_as_started: 'Viewed as gym',
+  scanner_registered: 'Scanner registered',
+  token_rotated: 'Token rotated',
+  scanner_revoked: 'Scanner revoked',
+  default_scanner_set: 'Default scanner set',
+  batch_registered: 'Batch registered',
+  batch_status_changed: 'Order status changed',
+}
 
 export type SubscriptionState = 'trial' | 'paid' | 'grace' | 'overdue' | 'suspended'
 

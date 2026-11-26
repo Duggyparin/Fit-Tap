@@ -18,7 +18,7 @@ import {
 } from '../lib/data'
 import { formatAgo, formatDate, formatPeso, todayInManila } from '../lib/format'
 import { checkinsByHour, hourLabel, rangeFor } from '../lib/reports'
-import { scannerLook } from '../lib/status'
+import { scannerStatusLook } from '../lib/status'
 import { useNow } from '../lib/useNow'
 
 function More({ to, children }: { to: string; children: string }) {
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                       : 'Never seen'}
                   </p>
                 </div>
-                <StatusBadge {...scannerLook(online)} />
+                <StatusBadge {...scannerStatusLook(scanner.status, online)} />
               </li>
             ))}
           </ul>

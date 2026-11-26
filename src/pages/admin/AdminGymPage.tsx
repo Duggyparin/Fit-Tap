@@ -1,6 +1,6 @@
-import { ArrowLeft, Ban, Circle, CircleCheck, CreditCard, RotateCcw, Store } from 'lucide-react'
+import { ArrowLeft, Ban, Circle, CircleCheck, CreditCard, Eye, RotateCcw, Store } from 'lucide-react'
 import { useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { Link, useNavigate, useParams } from 'react-router'
 import GymPaymentDialog from '../../components/admin/GymPaymentDialog'
 import Button from '../../components/Button'
 import ButtonLink from '../../components/ButtonLink'
@@ -10,7 +10,7 @@ import Icon from '../../components/Icon'
 import PageHeader from '../../components/PageHeader'
 import Panel from '../../components/Panel'
 import StatusBadge from '../../components/StatusBadge'
-import { reactivateGym, suspendGym, useAdminGym } from '../../lib/adminData'
+import { reactivateGym, startViewAs, suspendGym, useAdminGym } from '../../lib/adminData'
 import { formatDate, formatPeso } from '../../lib/format'
 import { METHOD_LABEL } from '../../lib/payments'
 import { GRACE_DAYS } from '../../lib/platform'
@@ -21,6 +21,7 @@ export default function AdminGymPage() {
   const { id } = useParams()
   const detail = useAdminGym(id).data
   const online = useOnline()
+  const navigate = useNavigate()
   const [dialog, setDialog] = useState<'pay' | 'suspend' | 'reactivate' | null>(null)
 
   if (!detail) {
@@ -52,6 +53,18 @@ export default function AdminGymPage() {
         subtitle={`${gym.city} · ${owner ? `${owner.display_name} (${owner.email})` : 'No owner yet'}`}
         action={<StatusBadge {...GYM_STATUS[gym.status]} />}
       />
+
+      <Button
+        variant="secondary"
+        icon={Eye}
+        className="self-start"
+        onClick={() => {
+          startViewAs(gym.gym_id)
+          navigate('/')
+        }}
+      >
+        View as gym (read-only)
+      </Button>
 
       <div className="grid gap-4 lg:grid-cols-2 lg:items-start lg:gap-6">
         <Panel title={`Onboarding checklist (${finished} of ${steps.length})`}>

@@ -1,6 +1,6 @@
 # Progress
 
-Frontend build with mock data. All parts are done; nothing has been pushed.
+Frontend build with mock data. All parts are done.
 
 - [x] Part 1: Members list, member profile, manual check-in (`c98f552`)
 - [x] Part 2: Register member (`7ef20a1`)
@@ -11,6 +11,8 @@ Frontend build with mock data. All parts are done; nothing has been pushed.
 - [x] Part 7: Reports (`44edfe1`)
 - [x] Part 8: Plans, Scanners, Staff, Settings, Card orders, More, Login (`8a9cce1`)
 - [x] Part 9: Final pass (`8e1eb90`)
+- [x] Part 10a: Platform admin: overview, gyms, subscription, owners (`2512119`)
+- [x] Part 10b: Platform admin: scanners, card orders, audit log, view as
 
 Decisions are in [decisions.md](decisions.md); database changes still needed are in
 [schema-todo.md](schema-todo.md).

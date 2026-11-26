@@ -7,6 +7,7 @@ import { ADMIN_SIDEBAR_ITEMS, ADMIN_TAB_ITEMS, adminActiveTab } from '../compone
 import BottomNav from '../components/nav/BottomNav'
 import Sidebar from '../components/nav/Sidebar'
 import OfflineBanner from '../components/OfflineBanner'
+import { stopViewAs } from '../lib/adminData'
 import { useCurrentUser } from '../lib/data'
 
 // The platform admin's frame. The navy "FitTap Admin" header on every screen
@@ -14,6 +15,11 @@ import { useCurrentUser } from '../lib/data'
 export default function AdminShell() {
   const { pathname } = useLocation()
   const user = useCurrentUser().data
+  // Coming back to the admin area always ends "View as gym". Only on arrival:
+  // starting a view happens while this layout is still on screen.
+  useEffect(() => {
+    stopViewAs()
+  }, [])
   useEffect(() => {
     window.scrollTo(0, 0)
   }, [pathname])

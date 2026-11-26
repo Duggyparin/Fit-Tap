@@ -20,6 +20,12 @@
     @apply bg-page text-ink antialiased;
   }
 
+  /* Controls switched off by a disabled group (read-only view) look off. */
+  fieldset:disabled :is(button, input, select, textarea) {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
   /* Tailwind v4 leaves buttons with the arrow cursor. */
   button:not(:disabled) {
     cursor: pointer;

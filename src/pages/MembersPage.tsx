@@ -9,7 +9,7 @@ import Icon from '../components/Icon'
 import MemberCardList from '../components/MemberCardList'
 import MemberTable from '../components/MemberTable'
 import SearchInput from '../components/SearchInput'
-import { useMembers } from '../lib/data'
+import { useMembers, useViewingGym } from '../lib/data'
 import {
   matchesMemberFilter,
   matchesRecord,
@@ -29,6 +29,7 @@ const FILTERS: { value: MemberFilter; label: string }[] = [
 
 export default function MembersPage() {
   const members = useMembers()
+  const readOnly = useViewingGym() !== null
   // The search lives in the address (/members?q=...), so the top bar can set
   // it and "Back" from a profile keeps it.
   const [params, setParams] = useSearchParams()
@@ -99,13 +100,15 @@ export default function MembersPage() {
       )}
 
       {/* Floating button, phone and tablet only; sits above the tab bar. */}
-      <Link
-        to="/members/new"
-        aria-label="Add member"
-        className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] flex size-14 items-center justify-center rounded-full bg-primary text-card shadow-lg hover:bg-primary-hover lg:hidden"
-      >
-        <Icon icon={Plus} size={28} />
-      </Link>
+      {!readOnly && (
+        <Link
+          to="/members/new"
+          aria-label="Add member"
+          className="fixed right-4 bottom-[calc(5rem+env(safe-area-inset-bottom))] flex size-14 items-center justify-center rounded-full bg-primary text-card shadow-lg hover:bg-primary-hover lg:hidden"
+        >
+          <Icon icon={Plus} size={28} />
+        </Link>
+      )}
     </div>
   )
 }

@@ -44,7 +44,7 @@ export default function TopBar() {
         </span>
         <div className="text-sm leading-tight">
           <p className="font-semibold">{user.display_name}</p>
-          <p className="text-ink-muted capitalize">{user.role}</p>
+          <p className="text-ink-muted capitalize">{user.role.replace('_', ' ')}</p>
         </div>
       </div>
     </header>

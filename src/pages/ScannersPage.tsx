@@ -2,7 +2,7 @@ import PageHeader from '../components/PageHeader'
 import StatusBadge from '../components/StatusBadge'
 import { setDefaultScanner, useIsOwner, useScanners } from '../lib/data'
 import { formatAgo } from '../lib/format'
-import { scannerLook } from '../lib/status'
+import { scannerStatusLook } from '../lib/status'
 import { useNow } from '../lib/useNow'
 import { useOnline } from '../lib/useOnline'
 
@@ -25,7 +25,7 @@ export default function ScannersPage() {
             <li key={scanner.scanner_id} className="rounded-xl border border-line bg-card">
               <div className="flex items-center justify-between gap-3 p-4">
                 <p className="font-semibold">{scanner.scanner_name}</p>
-                <StatusBadge {...scannerLook(up)} />
+                <StatusBadge {...scannerStatusLook(scanner.status, up)} />
               </div>
               <dl className="grid grid-cols-2 gap-3 px-4 pb-3 text-sm">
                 <div>

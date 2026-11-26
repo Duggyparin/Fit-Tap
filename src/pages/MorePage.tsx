@@ -11,7 +11,7 @@ export default function MorePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-4">
-      <PageHeader title="More" subtitle={`${gym.gym_name} · ${user.display_name} (${user.role})`} />
+      <PageHeader title="More" subtitle={`${gym.gym_name} · ${user.display_name} (${user.role.replace('_', ' ')})`} />
       <ul className="divide-y divide-line rounded-xl border border-line bg-card">
         {MORE_ITEMS.map((item) => (
           <li key={item.to}>

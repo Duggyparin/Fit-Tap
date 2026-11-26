@@ -5,6 +5,8 @@ import {
   Ban,
   CircleCheck,
   PackageCheck,
+  Store,
+  Wrench,
   Printer,
   Truck,
   CircleQuestionMark,
@@ -17,7 +19,14 @@ import {
   WifiOff,
   type LucideIcon,
 } from 'lucide-react'
-import type { CardBatchStatus, CheckinResult, CheckinSource, GymStatus } from '../types'
+import type {
+  CardBatchStatus,
+  CheckinResult,
+  CheckinSource,
+  GymStatus,
+  HardwareStatus,
+  ScannerStatus,
+} from '../types'
 import type { MembershipState } from './membership'
 import type { SubscriptionState } from './platform'
 
@@ -81,6 +90,19 @@ export const BATCH_STATUS: Record<CardBatchStatus, StatusLook> = {
   printing: { tone: 'warning', icon: Printer, label: 'Printing' },
   shipped: { tone: 'warning', icon: Truck, label: 'Shipped' },
   received: { tone: 'success', icon: PackageCheck, label: 'Received' },
+}
+
+// A revoked scanner is shown as such, whatever it last reported.
+export function scannerStatusLook(status: ScannerStatus, online: boolean): StatusLook {
+  return status === 'disabled'
+    ? { tone: 'danger', icon: Ban, label: 'Revoked' }
+    : scannerLook(online)
+}
+
+export const HARDWARE_STATUS: Record<HardwareStatus, StatusLook> = {
+  in_stock: { tone: 'muted', icon: PackageCheck, label: 'In stock' },
+  at_gym: { tone: 'success', icon: Store, label: 'At gym' },
+  in_repair: { tone: 'warning', icon: Wrench, label: 'In repair' },
 }
 
 export const GYM_STATUS: Record<GymStatus, StatusLook> = {

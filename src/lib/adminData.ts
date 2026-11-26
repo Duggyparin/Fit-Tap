@@ -5,8 +5,18 @@
 
 import { useMemo } from 'react'
 import { ADMIN_ID, OWNER_ID } from '../mock'
-import type { AppUser, AuditAction, AuditEntry, Gym, GymPayment, Scanner } from '../types'
-import type { Query } from './data'
+import type {
+  AppUser,
+  AuditAction,
+  AuditEntry,
+  CardBatch,
+  CardBatchStatus,
+  Gym,
+  GymPayment,
+  Scanner,
+} from '../types'
+import { countBatch, type BatchCounts, type NewCard } from './batches'
+import { setDefaultScanner, type Query } from './data'
 import { formatAgo, formatDate, formatPeso, todayInManila } from './format'
 import { buildMemberRecord, canEnter } from './members'
 import { METHOD_LABEL, savedReference, type PaymentInput } from './payments'
@@ -362,4 +372,225 @@ export function useOwners(): Query<(AppUser & { gymName: string })[]> {
     [data],
   )
   return { data: owners, isLoading: false }
+}
+
+// ---------- View as gym (read-only) ----------
+
+export function startViewAs(gymId: string) {
+  commit({ viewGymId: gymId }, entry('view_as_started', gymId, 'Opened the gym read-only'))
+}
+
+export function stopViewAs() {
+  if (db.viewGymId) update({ viewGymId: null })
+}
+
+// ---------- Scanners ----------
+
+export interface AdminScanner {
+  scanner: Scanner
+  gymName: string | null // null = not at a gym
+  online: boolean
+}
+
+export function useAdminScanners(): Query<AdminScanner[]> {
+  const data = useAll()
+  const now = useNow(10_000)
+  const scanners = data.scanners
+    .map((scanner) => ({
+      scanner,
+      gymName: data.gyms.find((g) => g.gym_id === scanner.gym_id)?.gym_name ?? null,
+      online: isScannerOnline(scanner, now),
+    }))
+    .sort(
+      (a, b) =>
+        // Scanners that are not at a gym go last.
+        Number(a.gymName === null) - Number(b.gymName === null) ||
+        (a.gymName ?? '').localeCompare(b.gymName ?? '') ||
+        a.scanner.scanner_name.localeCompare(b.scanner.scanner_name),
+    )
+  return { data: scanners, isLoading: false }
+}
+
+// MOCK ONLY. In the real system a server-side function must create the token,
+// return it once and store only its SHA-256 hash. It must never be made in the
+// browser.
+function mockToken(scannerId: string): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(24))
+  const token = `mock_${[...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')}`
+  let hash = 0
+  for (const c of token) hash = (Math.imul(hash, 31) + c.charCodeAt(0)) >>> 0
+  update({
+    scannerTokenHashes: { ...db.scannerTokenHashes, [scannerId]: `mockhash_${hash.toString(16)}` },
+  })
+  return token
+}
+
+// Returns the token so it can be shown once. It is not saved anywhere.
+export function registerScanner(gymId: string, name: string): string {
+  const scanner: Scanner = {
+    scanner_id: newId(),
+    gym_id: gymId,
+    scanner_name: name.trim(),
+    firmware_version: null,
+    last_seen_at: null,
+    status: 'active',
+    hardware_status: 'at_gym',
+    // The gym's first usable scanner becomes its default.
+    is_default: !db.scanners.some((s) => s.gym_id === gymId && s.is_default),
+  }
+  commit(
+    { scanners: [...db.scanners, scanner] },
+    entry('scanner_registered', gymId, `Registered scanner “${scanner.scanner_name}”`),
+  )
+  return mockToken(scanner.scanner_id)
+}
+
+export function rotateToken(scannerId: string): string | null {
+  const scanner = db.scanners.find((s) => s.scanner_id === scannerId)
+  if (!scanner || scanner.status !== 'active') return null
+  const token = mockToken(scannerId) // replaces the old hash
+  commit({}, entry('token_rotated', scanner.gym_id, `New token for “${scanner.scanner_name}”`))
+  return token
+}
+
+export function revokeScanner(scannerId: string) {
+  const scanner = db.scanners.find((s) => s.scanner_id === scannerId)
+  if (!scanner) return
+  // If it was the default, another working scanner of the gym takes over.
+  const next = scanner.is_default
+    ? db.scanners.find(
+        (s) =>
+          s.scanner_id !== scannerId &&
+          s.gym_id === scanner.gym_id &&
+          s.status === 'active' &&
+          s.hardware_status === 'at_gym',
+      )
+    : undefined
+  const hashes = { ...db.scannerTokenHashes }
+  delete hashes[scannerId]
+  commit(
+    {
+      scannerTokenHashes: hashes,
+      scanners: db.scanners.map((s) =>
+        s.scanner_id === scannerId
+          ? { ...s, status: 'disabled', is_default: false }
+          : s.scanner_id === next?.scanner_id
+            ? { ...s, is_default: true }
+            : s,
+      ),
+    },
+    entry(
+      'scanner_revoked',
+      scanner.gym_id,
+      `Revoked “${scanner.scanner_name}”${next ? `; “${next.scanner_name}” is now the default` : ''}`,
+    ),
+  )
+}
+
+export function setGymDefaultScanner(scannerId: string) {
+  const scanner = db.scanners.find((s) => s.scanner_id === scannerId)
+  if (!scanner?.gym_id) return
+  setDefaultScanner(scannerId)
+  commit(
+    {},
+    entry('default_scanner_set', scanner.gym_id, `“${scanner.scanner_name}” is the default`),
+  )
+}
+
+// ---------- Card orders ----------
+
+export function useAdminBatches(): Query<(BatchCounts & { gymName: string })[]> {
+  const data = useAll()
+  const batches = useMemo(
+    () =>
+      [...data.cardBatches]
+        .sort((a, b) => b.ordered_at.localeCompare(a.ordered_at))
+        .map((batch) => ({
+          ...countBatch(batch, data.cards),
+          gymName: data.gyms.find((g) => g.gym_id === batch.gym_id)?.gym_name ?? '',
+        })),
+    [data],
+  )
+  return { data: batches, isLoading: false }
+}
+
+// UIDs registered anywhere, and the printed numbers this gym already uses.
+export function useUsedCards(gymId: string): { uids: Set<string>; numbers: Set<string> } {
+  const cards = useAll().cards
+  return {
+    uids: new Set(cards.map((c) => c.card_uid)),
+    numbers: new Set(
+      cards.filter((c) => c.gym_id === gymId).flatMap((c) => c.card_number ?? []),
+    ),
+  }
+}
+
+export function setBatchStatus(batchId: string, status: CardBatchStatus) {
+  const batch = db.cardBatches.find((b) => b.batch_id === batchId)
+  if (!batch || batch.status === status) return
+  commit(
+    {
+      cardBatches: db.cardBatches.map((b) => (b.batch_id === batchId ? { ...b, status } : b)),
+    },
+    entry(
+      'batch_status_changed',
+      batch.gym_id,
+      `Order of ${batch.quantity} cards: ${batch.status} → ${status}`,
+    ),
+  )
+}
+
+// Saves cards as stock for a gym, into an existing order or a new one.
+export function registerBatch(gymId: string, batchId: string | null, cards: NewCard[]) {
+  const batch: CardBatch | null = batchId
+    ? null
+    : {
+        batch_id: newId(),
+        gym_id: gymId,
+        quantity: cards.length,
+        chip_type: 'NTAG215',
+        design_url: null,
+        price_centavos: 0,
+        status: 'received',
+        ordered_at: new Date().toISOString(),
+      }
+  const target = batchId ?? batch!.batch_id
+  commit(
+    {
+      cardBatches: batch ? [...db.cardBatches, batch] : db.cardBatches,
+      cards: [
+        ...db.cards,
+        ...cards.map((c) => ({
+          card_id: newId(),
+          gym_id: gymId,
+          member_id: null,
+          batch_id: target,
+          card_uid: c.uid,
+          card_number: c.number,
+          status: 'stock' as const,
+          assigned_at: null,
+        })),
+      ],
+    },
+    entry('batch_registered', gymId, `${cards.length} cards saved as stock`),
+  )
+}
+
+// ---------- Audit log ----------
+
+export function useAuditLog(): Query<(AuditEntry & { actor: string; gymName: string })[]> {
+  const data = useAll()
+  const log = useMemo(
+    () =>
+      [...data.auditLog]
+        .sort((a, b) => b.created_at.localeCompare(a.created_at))
+        .map((e) => ({
+          ...e,
+          actor:
+            data.appUsers.find((u) => u.user_id === e.actor_user_id)?.display_name ?? 'Unknown',
+          gymName: data.gyms.find((g) => g.gym_id === e.gym_id)?.gym_name ?? '—',
+        })),
+    [data],
+  )
+  return { data: log, isLoading: false }
 }

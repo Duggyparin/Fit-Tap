@@ -98,3 +98,20 @@ One line per decision, grouped by part.
 - Offline-scanner counts and scanner/quiet alerts ignore suspended gyms. "Overdue gyms" includes suspended ones that still owe.
 - Card batch status "requested" is renamed "ordered".
 - An email can belong to only one account.
+
+## Part 10b: Scanners, card orders, audit log, view as
+- Tokens are mock (`mock_...`), shown once with a copy button; only a mock hash is kept, never in the audit log or browser storage.
+- "Register scanner" creates a new scanner at a gym; the first usable one becomes the default.
+- Revoking the default scanner moves the default to another working scanner of that gym, if any.
+- Hardware status is displayed only; moving scanners between stock, gym and repair is not built.
+- A batch can fill an open order or become a new batch (marked received, no price). Registering does not change an existing order's status.
+- UIDs must be new across all gyms; printed numbers must be new within the gym.
+- Owners see their orders' status, counts and price, with no admin controls.
+- "View as gym" disables every button and field on the gym screens, including filters, tabs and CSV export; links and menus still work. It shows what the owner sees, including income.
+- The view ends on "Exit" or on returning to any admin page; a reload also ends it.
+- Opening "View as gym" is written to the audit log.
+
+## Later (platform admin ideas, not built)
+- Announcements to gym owners.
+- Usage stats per gym (photo storage).
+- Per-gym data export and deletion for the Data Privacy Act.
