@@ -18,12 +18,13 @@ import type {
   Payment,
   Plan,
   Scanner,
+  WalkIn,
 } from '../types'
 import { summarizeCheckins, type CheckinSummary } from './checkins'
-import { LINK_SECONDS, RECENT_TAPS_HOURS } from './constants'
+import { LINK_SECONDS, RECENT_TAPS_HOURS, WALK_IN_DEFAULT_CENTAVOS } from './constants'
 import { todayInManila } from './format'
 import { buildMemberRecord, canEnter, type MemberRecord } from './members'
-import { endDateFor, memberAccess } from './membership'
+import { endDateFor, latestRunning, memberAccess, renewalStartFor } from './membership'
 import { savedReference, type PaymentInput } from './payments'
 import { isScannerOnline } from './scanners'
 import { useNow } from './useNow'
@@ -43,7 +44,14 @@ export interface CheckinView {
 
 // ---------- In-memory store (resets when the page reloads) ----------
 
+export interface GymSettings {
+  walkInCentavos: number // default price on the Walk-in form
+}
+
+const settings: GymSettings = { walkInCentavos: WALK_IN_DEFAULT_CENTAVOS }
+
 const initialDb = {
+  settings,
   gym: mock.gym,
   appUsers: mock.appUsers,
   members: mock.members,
@@ -483,6 +491,64 @@ export function simulateLinkTap(requestId: string, result: LinkResult) {
   const uid = stock?.card_uid ?? `04AA${newId().slice(-10)}`
   assignCard(request.member_id, uid)
   setRequest(requestId, { status: 'done', card_uid: uid, result })
+}
+
+// Saves a renewal and its payment. The start date follows the renewal rule.
+export function renewMembership(
+  memberId: string,
+  planId: string,
+  payment: PaymentInput,
+  amountCentavos: number,
+): Membership {
+  const plan = db.plans.find((p) => p.plan_id === planId)!
+  const today = todayInManila()
+  const own = db.memberships.filter((m) => m.member_id === memberId)
+  const start = renewalStartFor(latestRunning(own, today), today)
+  const { membership, paid } = sale(memberId, plan, start, payment, amountCentavos)
+  update({
+    memberships: [...db.memberships, membership],
+    payments: [...db.payments, paid],
+  })
+  return membership
+}
+
+// ---------- Gym settings ----------
+
+export function useSettings(): Query<GymSettings> {
+  return { data: useDb().settings, isLoading: false }
+}
+
+// ---------- Walk-ins ----------
+
+export function useTodayWalkIns(): Query<{ walkIns: WalkIn[]; totalCentavos: number }> {
+  const all = useDb().walkIns
+  const data = useMemo(() => {
+    const today = todayInManila()
+    const walkIns = all
+      .filter((w) => todayInManila(new Date(w.visited_at)) === today)
+      .sort((a, b) => b.visited_at.localeCompare(a.visited_at))
+    return { walkIns, totalCentavos: walkIns.reduce((sum, w) => sum + w.amount_centavos, 0) }
+  }, [all])
+  return { data, isLoading: false }
+}
+
+export function addWalkIn(input: {
+  guestName: string
+  amountCentavos: number
+  payment: PaymentInput
+}): WalkIn {
+  const walkIn: WalkIn = {
+    walkin_id: newId(),
+    gym_id: db.gym.gym_id,
+    guest_name: input.guestName.trim() || null,
+    amount_centavos: input.amountCentavos,
+    method: input.payment.method,
+    reference_no: savedReference(input.payment),
+    visited_at: new Date().toISOString(), // always filled in automatically
+    recorded_by: currentUserId(),
+  }
+  update({ walkIns: [walkIn, ...db.walkIns] })
+  return walkIn
 }
 
 // ---------- Development only ----------

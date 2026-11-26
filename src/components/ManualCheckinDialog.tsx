@@ -1,18 +1,17 @@
-import { ArrowLeft, CircleCheck, RefreshCw, SearchX } from 'lucide-react'
+import { ArrowLeft, CircleCheck, RefreshCw } from 'lucide-react'
 import { useState } from 'react'
-import { addManualCheckin, useMember, useMembers, useTodayCheckins } from '../lib/data'
+import { addManualCheckin, useMember, useTodayCheckins } from '../lib/data'
 import { formatDate, formatTime } from '../lib/format'
-import { canEnter, matchesSearch, sortMembers, type MemberRecord } from '../lib/members'
+import { canEnter, type MemberRecord } from '../lib/members'
 import { useOnline } from '../lib/useOnline'
 import type { Checkin } from '../types'
 import Button from './Button'
 import ButtonLink from './ButtonLink'
 import DaysLeftBadge from './DaysLeftBadge'
-import EmptyState from './EmptyState'
 import Icon from './Icon'
 import MemberPhoto from './MemberPhoto'
+import MemberPicker from './MemberPicker'
 import Modal from './Modal'
-import SearchInput from './SearchInput'
 import { MembershipBadge } from './StatusBadge'
 
 // Staff check a member in by hand: search -> confirm the face -> done.
@@ -26,14 +25,11 @@ export default function ManualCheckinDialog({
 }) {
   const [selected, setSelected] = useState<string | null>(memberId ?? null)
   const [done, setDone] = useState<Checkin | null>(null)
-  const [query, setQuery] = useState('')
-  const members = useMembers()
   const member = useMember(selected ?? undefined).data
 
   function startOver() {
     setSelected(null)
     setDone(null)
-    setQuery('')
   }
 
   return (
@@ -58,63 +54,9 @@ export default function ManualCheckinDialog({
           onCheckIn={() => setDone(addManualCheckin(member.member.member_id))}
         />
       ) : (
-        <Results
-          records={sortMembers(
-            members.data.filter((r) => matchesSearch(r.member, query)),
-            { by: 'name', ascending: true },
-          )}
-          query={query}
-          onQuery={setQuery}
-          onSelect={setSelected}
-        />
+        <MemberPicker autoFocus onSelect={setSelected} />
       )}
     </Modal>
-  )
-}
-
-function Results({
-  records,
-  query,
-  onQuery,
-  onSelect,
-}: {
-  records: MemberRecord[]
-  query: string
-  onQuery: (value: string) => void
-  onSelect: (memberId: string) => void
-}) {
-  return (
-    <div className="flex flex-col gap-3">
-      <SearchInput
-        autoFocus
-        label="Search member"
-        placeholder="Search by name or phone"
-        value={query}
-        onChange={onQuery}
-      />
-      {records.length === 0 ? (
-        <EmptyState icon={SearchX} title="No member found" text="Check the spelling or number." />
-      ) : (
-        <ul className="divide-y divide-line rounded-xl border border-line bg-card">
-          {records.map((record) => (
-            <li key={record.member.member_id}>
-              <button
-                type="button"
-                onClick={() => onSelect(record.member.member_id)}
-                className="flex w-full items-center gap-3 p-3 text-left hover:bg-page"
-              >
-                <MemberPhoto member={record.member} />
-                <span className="min-w-0 flex-1">
-                  <span className="block font-semibold">{record.member.full_name}</span>
-                  <span className="block text-sm text-ink-muted">{record.member.phone}</span>
-                </span>
-                <DaysLeftBadge record={record} />
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }
 

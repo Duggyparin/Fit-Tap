@@ -12,3 +12,6 @@ export const LINK_SECONDS = 60
 export const SCANNER_ONLINE_MINUTES = 2
 // How far back "Choose from recent taps" looks.
 export const RECENT_TAPS_HOURS = 3
+
+// Default price on the Walk-in form (editable in Settings).
+export const WALK_IN_DEFAULT_CENTAVOS = 100_00

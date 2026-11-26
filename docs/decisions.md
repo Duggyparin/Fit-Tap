@@ -37,3 +37,11 @@ One line per decision, grouped by part.
 - Recent taps show one row per card, with the last 4 characters of its UID; stock cards still count as unknown.
 - Card numbers are matched ignoring upper/lower case.
 - Mock only: scanners that start online keep a pretend heartbeat.
+
+## Part 4: Renew
+- The chosen member is kept in the address (`/renew?member=:id`).
+- The member's current plan is preselected if still active, else a 30-day plan.
+- A renewal continues from the latest-ending running membership, so renewing twice stacks correctly.
+- The amount can be edited; picking another plan resets it to that plan's price.
+- Renewing a frozen member is allowed, with a note that they stay frozen until unfrozen.
+- Date ranges show the first year only when it differs from the last day's year.

@@ -59,3 +59,15 @@ export function memberAccess(
   const lastEnd = running.map((m) => m.end_date).sort().at(-1)!
   return isExpiring(lastEnd, today) ? 'expiring' : 'active'
 }
+
+// The membership a renewal continues from: the active or frozen one that ends
+// latest and has not ended yet (a member may already have renewed early).
+export function latestRunning<T extends Pick<Membership, 'status' | 'end_date'>>(
+  memberships: T[],
+  today: DateString = todayInManila(),
+): T | null {
+  const running = memberships
+    .filter((m) => m.status !== 'cancelled' && m.end_date >= today)
+    .sort((a, b) => a.end_date.localeCompare(b.end_date))
+  return running.at(-1) ?? null
+}

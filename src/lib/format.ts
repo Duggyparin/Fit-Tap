@@ -105,3 +105,14 @@ export function formatAgo(value: Timestamp, now: number = Date.now()): string {
   const days = Math.floor(hours / 24)
   return days === 1 ? '1 day ago' : `${days} days ago`
 }
+
+// "Nov 26 to Dec 25, 2026 (30 days)"; the first year is shown only if it
+// differs. A single day is "Nov 26, 2026 (1 day)".
+export function formatRange(start: DateString, end: DateString): string {
+  const days = daysLeft(end, start) + 1
+  const length = `(${days} ${days === 1 ? 'day' : 'days'})`
+  if (start === end) return `${formatDate(start)} ${length}`
+  const sameYear = start.slice(0, 4) === end.slice(0, 4)
+  const from = sameYear ? formatDate(start).replace(/, \d{4}$/, '') : formatDate(start)
+  return `${from} to ${formatDate(end)} ${length}`
+}
