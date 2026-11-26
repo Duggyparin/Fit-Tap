@@ -62,14 +62,15 @@ export function checkinsByHour(checkins: Checkin[]): { hour: number; count: numb
 
 // Unique members allowed in on each day of the range.
 export function membersPerDay(checkins: Checkin[], range: Range) {
-  return daysIn(range).map((day) => ({
-    day,
-    count: new Set(
-      checkins
-        .filter((c) => c.result === 'allowed' && dayOf(c.scanned_at) === day)
-        .map((c) => c.member_id),
-    ).size,
-  }))
+  // One pass over the check-ins, then one lookup per day.
+  const members = new Map<DateString, Set<string | null>>()
+  for (const c of checkins) {
+    if (c.result !== 'allowed') continue
+    const day = dayOf(c.scanned_at)
+    if (!members.has(day)) members.set(day, new Set())
+    members.get(day)!.add(c.member_id)
+  }
+  return daysIn(range).map((day) => ({ day, count: members.get(day)?.size ?? 0 }))
 }
 
 // ---------- CSV ----------

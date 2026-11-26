@@ -115,3 +115,4 @@ One line per decision, grouped by part.
 - Announcements to gym owners.
 - Usage stats per gym (photo storage).
 - Per-gym data export and deletion for the Data Privacy Act.
+- Dates are converted with one reused formatter, because building one per check-in made Reports slow.

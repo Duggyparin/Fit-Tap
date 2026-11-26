@@ -22,10 +22,18 @@ export function formatPeso(centavos: number): string {
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/
 
+// The en-CA locale formats dates as YYYY-MM-DD. Building a formatter is slow,
+// so it is made once and reused (reports convert hundreds of timestamps).
+const isoDayFormat = new Intl.DateTimeFormat('en-CA', {
+  timeZone: TIME_ZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+})
+
 // Today's date in Manila as "2026-11-26". Pass `now` to test other moments.
 export function todayInManila(now: Date = new Date()): DateString {
-  // The en-CA locale formats dates as YYYY-MM-DD.
-  return now.toLocaleDateString('en-CA', { timeZone: TIME_ZONE })
+  return isoDayFormat.format(now)
 }
 
 // Turns "2026-11-26" into a whole day number, so two dates can be subtracted
