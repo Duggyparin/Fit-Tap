@@ -3,6 +3,7 @@ import {
   DoorOpen,
   Ellipsis,
   LayoutDashboard,
+  LogOut,
   Nfc,
   Package,
   RefreshCw,
@@ -34,6 +35,9 @@ const cardOrders: NavItem = { label: 'Card orders', to: '/card-orders', icon: Pa
 const staff: NavItem = { label: 'Staff', to: '/staff', icon: UserCog }
 const settings: NavItem = { label: 'Settings', to: '/settings', icon: Settings }
 const more: NavItem = { label: 'More', to: '/more', icon: Ellipsis }
+
+// Shown under the menu (desktop) and on the More screen (phone).
+export const LOG_OUT_ITEM: NavItem = { label: 'Log out', to: '/login', icon: LogOut }
 
 // Desktop sidebar, top to bottom.
 export const SIDEBAR_ITEMS: NavItem[] = [

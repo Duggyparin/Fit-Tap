@@ -64,3 +64,14 @@ One line per decision, grouped by part.
 - The payments CSV includes walk-ins, with a Type column; amounts are plain pesos with two decimals.
 - CSV cells starting with = + - @ get a leading apostrophe so spreadsheets do not run them as formulas.
 - The expiring list always shows the next 7 days, whatever range is picked.
+
+## Part 8: Plans, Scanners, Staff, Settings, Card orders, More, Login
+- Only the owner can change plans, settings and the default scanner; staff see them read-only.
+- Plans are retired, never deleted; the last active plan cannot be retired.
+- Plan names must be unique; editing a plan does not change existing memberships.
+- Settings: gym name and walk-in price are editable (in memory); "expiring soon" days are read-only.
+- The Scanners page keeps a fixed row order; elsewhere the default scanner is listed first.
+- Card batch counts come from card rows; "Register batch" is disabled for now.
+- "Log out" is at the bottom of the sidebar and of the More screen.
+- Login only checks that an email and password are filled in; nothing is stored and pages are not protected yet.
+- A second mock batch (printing) shows another order status.

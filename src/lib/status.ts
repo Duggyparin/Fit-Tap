@@ -4,6 +4,9 @@
 import {
   Ban,
   CircleCheck,
+  PackageCheck,
+  Printer,
+  Truck,
   CircleQuestionMark,
   CircleSlash,
   CircleX,
@@ -14,7 +17,7 @@ import {
   WifiOff,
   type LucideIcon,
 } from 'lucide-react'
-import type { CheckinResult, CheckinSource } from '../types'
+import type { CardBatchStatus, CheckinResult, CheckinSource } from '../types'
 import type { MembershipState } from './membership'
 
 export type StatusTone = 'success' | 'danger' | 'warning' | 'muted'
@@ -64,6 +67,19 @@ export function scannerLook(online: boolean): StatusLook {
   return online
     ? { tone: 'success', icon: Wifi, label: 'Online' }
     : { tone: 'danger', icon: WifiOff, label: 'Offline' }
+}
+
+export function accountLook(active: boolean): StatusLook {
+  return active
+    ? { tone: 'success', icon: CircleCheck, label: 'Active' }
+    : { tone: 'muted', icon: CircleSlash, label: 'Disabled' }
+}
+
+export const BATCH_STATUS: Record<CardBatchStatus, StatusLook> = {
+  requested: { tone: 'muted', icon: Clock, label: 'Requested' },
+  printing: { tone: 'warning', icon: Printer, label: 'Printing' },
+  shipped: { tone: 'warning', icon: Truck, label: 'Shipped' },
+  received: { tone: 'success', icon: PackageCheck, label: 'Received' },
 }
 
 // "offline" taps (a later firmware stage) also come from a scanner.

@@ -29,7 +29,10 @@ export default function RegisterMemberPage() {
   const [photo, setPhoto] = useState<string | null>(null)
   const [consent, setConsent] = useState(false)
   const [planId, setPlanId] = useState(
-    () => (plans.find((p) => p.is_active && p.duration_days === 30) ?? plans[0]).plan_id,
+    () => {
+      const active = plans.filter((p) => p.is_active)
+      return (active.find((p) => p.duration_days === 30) ?? active[0]).plan_id
+    },
   )
   const [payment, setPayment] = useState(NEW_PAYMENT)
   const [tried, setTried] = useState(false)

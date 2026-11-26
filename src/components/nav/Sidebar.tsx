@@ -1,8 +1,8 @@
 import { Nfc } from 'lucide-react'
-import { NavLink } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import { useGym } from '../../lib/data'
 import Icon from '../Icon'
-import { SIDEBAR_ITEMS } from './navItems'
+import { LOG_OUT_ITEM, SIDEBAR_ITEMS } from './navItems'
 
 // Desktop only (lg and up).
 export default function Sidebar() {
@@ -44,6 +44,14 @@ export default function Sidebar() {
           ))}
         </ul>
       </nav>
+
+      <Link
+        to={LOG_OUT_ITEM.to}
+        className="mt-auto flex min-h-11 shrink-0 items-center gap-3 rounded-lg px-3 text-sm font-medium text-card/70 hover:bg-card/10 hover:text-card"
+      >
+        <Icon icon={LOG_OUT_ITEM.icon} />
+        {LOG_OUT_ITEM.label}
+      </Link>
     </aside>
   )
 }

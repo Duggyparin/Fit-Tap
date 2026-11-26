@@ -15,4 +15,14 @@ export const cardBatches: CardBatch[] = [
     status: 'received',
     ordered_at: `${daysFromToday(-120)}T02:00:00.000Z`,
   },
+  {
+    batch_id: mockId(42),
+    gym_id: GYM_ID,
+    quantity: 100,
+    chip_type: 'NTAG215',
+    design_url: null,
+    price_centavos: pesos(4800),
+    status: 'printing',
+    ordered_at: `${daysFromToday(-6)}T02:00:00.000Z`,
+  },
 ]

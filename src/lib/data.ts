@@ -8,6 +8,7 @@ import { mockId } from '../mock/helpers'
 import { randomCheckin } from '../mock/simulate'
 import type {
   AppUser,
+  CardBatch,
   Checkin,
   Gym,
   LinkRequest,
@@ -627,6 +628,96 @@ export function useReport(range: Range): Query<Report> {
     }
   }, [data, from, to])
   return { data: report, isLoading: false }
+}
+
+// ---------- Plans ----------
+
+export interface PlanInput {
+  name: string
+  durationDays: number
+  priceCentavos: number
+}
+
+// Adds a plan, or edits the one with planId. Existing memberships keep their
+// dates and payments.
+export function savePlan(input: PlanInput, planId?: string) {
+  const fields = {
+    plan_name: input.name.trim(),
+    duration_days: input.durationDays,
+    price_centavos: input.priceCentavos,
+  }
+  update({
+    plans: planId
+      ? db.plans.map((p) => (p.plan_id === planId ? { ...p, ...fields } : p))
+      : [...db.plans, { plan_id: newId(), gym_id: db.gym.gym_id, is_active: true, ...fields }],
+  })
+}
+
+// Plans are retired, never deleted, so old memberships keep their history.
+export function setPlanActive(planId: string, active: boolean) {
+  update({
+    plans: db.plans.map((p) => (p.plan_id === planId ? { ...p, is_active: active } : p)),
+  })
+}
+
+// ---------- Scanners, staff and settings ----------
+
+export function setDefaultScanner(scannerId: string) {
+  update({
+    scanners: db.scanners.map((s) =>
+      s.gym_id === db.gym.gym_id ? { ...s, is_default: s.scanner_id === scannerId } : s,
+    ),
+  })
+}
+
+// This gym's owner and staff accounts (not the platform admin).
+export function useStaff(): Query<AppUser[]> {
+  const data = useDb()
+  const users = data.appUsers.filter(
+    (u) => u.gym_id === data.gym.gym_id && u.role !== 'platform_admin',
+  )
+  return { data: users, isLoading: false }
+}
+
+export function saveSettings(input: { gymName: string; walkInCentavos: number }) {
+  update({
+    gym: { ...db.gym, gym_name: input.gymName.trim() },
+    settings: { ...db.settings, walkInCentavos: input.walkInCentavos },
+  })
+}
+
+// ---------- Card orders ----------
+
+export interface BatchView {
+  batch: CardBatch
+  registered: number // card UIDs saved for this batch
+  inStock: number
+  linked: number
+  blocked: number // lost or disabled
+}
+
+export function useCardBatches(): Query<BatchView[]> {
+  const data = useDb()
+  const views = useMemo(
+    () =>
+      data.cardBatches
+        .filter((b) => b.gym_id === data.gym.gym_id)
+        .sort((a, b) => b.ordered_at.localeCompare(a.ordered_at))
+        .map((batch) => {
+          const cards = data.cards.filter((c) => c.batch_id === batch.batch_id)
+          const count = (...status: string[]) =>
+            cards.filter((c) => status.includes(c.status)).length
+          return {
+            batch,
+            registered: cards.length,
+            inStock: count('stock'),
+            linked: count('active'),
+            blocked: count('lost', 'disabled'),
+          }
+        }),
+    [data],
+  )
+  return { data: views, isLoading: false }
 }
 
 // ---------- Development only ----------
