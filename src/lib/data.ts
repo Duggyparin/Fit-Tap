@@ -6,12 +6,27 @@ import { useMemo, useSyncExternalStore } from 'react'
 import * as mock from '../mock'
 import { mockId } from '../mock/helpers'
 import { randomCheckin } from '../mock/simulate'
-import type { AppUser, Checkin, Gym, Member, Membership, Payment, Plan } from '../types'
+import type {
+  AppUser,
+  Checkin,
+  Gym,
+  LinkRequest,
+  LinkResult,
+  Member,
+  Membership,
+  NfcCard,
+  Payment,
+  Plan,
+  Scanner,
+} from '../types'
 import { summarizeCheckins, type CheckinSummary } from './checkins'
+import { LINK_SECONDS, RECENT_TAPS_HOURS } from './constants'
 import { todayInManila } from './format'
 import { buildMemberRecord, canEnter, type MemberRecord } from './members'
 import { endDateFor, memberAccess } from './membership'
 import { savedReference, type PaymentInput } from './payments'
+import { isScannerOnline } from './scanners'
+import { useNow } from './useNow'
 
 // Every hook returns this. Mock data is instant, so isLoading is always false.
 export interface Query<T> {
@@ -279,6 +294,195 @@ export function registerMember(input: NewMember): string {
     payments: [...db.payments, paid],
   })
   return member.member_id
+}
+
+// ---------- Scanners ----------
+
+export interface ScannerView {
+  scanner: Scanner
+  online: boolean
+}
+
+// This gym's scanners, the default one first. Rechecks "online" every 10 s.
+export function useScanners(): Query<ScannerView[]> {
+  const data = useDb()
+  const now = useNow(10_000)
+  const views = data.scanners
+    .filter((s) => s.gym_id === data.gym.gym_id)
+    .sort((a, b) => Number(b.is_default) - Number(a.is_default))
+    .map((scanner) => ({ scanner, online: isScannerOnline(scanner, now) }))
+  return { data: views, isLoading: false }
+}
+
+// MOCK ONLY: pretend the scanners that are online keep reporting in. The real
+// firmware only reports when a card is tapped (see docs/schema-todo.md).
+const beating = mock.scanners.filter((s) => isScannerOnline(s)).map((s) => s.scanner_id)
+window.setInterval(() => {
+  const now = new Date().toISOString()
+  update({
+    scanners: db.scanners.map((s) =>
+      beating.includes(s.scanner_id) ? { ...s, last_seen_at: now } : s,
+    ),
+  })
+}, 30_000)
+
+// ---------- Link mode ----------
+
+// With Supabase this hook will poll the row every 2 s (Realtime later).
+export function useLinkRequest(requestId: string | null): Query<LinkRequest | null> {
+  const requests = useDb().linkRequests
+  const data = requests.find((r) => r.request_id === requestId) ?? null
+  return { data, isLoading: false }
+}
+
+function setRequest(requestId: string, changes: Partial<LinkRequest>) {
+  update({
+    linkRequests: db.linkRequests.map((r) =>
+      r.request_id === requestId ? { ...r, ...changes } : r,
+    ),
+  })
+}
+
+function isPending(r: LinkRequest): boolean {
+  return r.status === 'pending' && Date.parse(r.expires_at) > Date.now()
+}
+
+// Starts waiting for a card. Only one pending request per scanner: an earlier
+// one for the same member is cancelled; another member's means "busy" (null).
+export function startLinkRequest(memberId: string, scannerId: string): LinkRequest | null {
+  const pending = db.linkRequests.filter((r) => r.scanner_id === scannerId && isPending(r))
+  if (pending.some((r) => r.member_id !== memberId)) return null
+  pending.forEach((r) => setRequest(r.request_id, { status: 'cancelled' }))
+
+  const request: LinkRequest = {
+    request_id: newId(),
+    gym_id: db.gym.gym_id,
+    scanner_id: scannerId,
+    member_id: memberId,
+    requested_by: currentUserId(),
+    status: 'pending',
+    card_uid: null,
+    result: null,
+    expires_at: new Date(Date.now() + LINK_SECONDS * 1000).toISOString(),
+  }
+  update({ linkRequests: [...db.linkRequests, request] })
+  return request
+}
+
+// Ends a request that is still pending (no effect otherwise).
+export function endLinkRequest(requestId: string, status: 'cancelled' | 'expired') {
+  const request = db.linkRequests.find((r) => r.request_id === requestId)
+  if (request?.status === 'pending') setRequest(requestId, { status })
+}
+
+// ---------- Cards ----------
+
+// Used by "Replace card": the old card stops working before a new one is linked.
+export function markCardsLost(memberId: string) {
+  update({
+    cards: db.cards.map((c) =>
+      c.member_id === memberId && c.status === 'active' ? { ...c, status: 'lost' } : c,
+    ),
+  })
+}
+
+// Attaches a card to a member (an existing card row, or a new plain card).
+function assignCard(memberId: string, uid: string) {
+  const changes = {
+    member_id: memberId,
+    status: 'active' as const,
+    assigned_at: new Date().toISOString(),
+  }
+  const existing = db.cards.find((c) => c.card_uid === uid)
+  update({
+    cards: existing
+      ? db.cards.map((c) => (c.card_id === existing.card_id ? { ...c, ...changes } : c))
+      : [
+          ...db.cards,
+          {
+            card_id: newId(),
+            gym_id: db.gym.gym_id,
+            batch_id: null,
+            card_uid: uid,
+            card_number: null,
+            ...changes,
+          },
+        ],
+  })
+}
+
+// Why this card cannot go to this member, or null if it can.
+function cardProblem(card: NfcCard | undefined, memberId: string): string | null {
+  if (!card) return null
+  if (card.gym_id !== db.gym.gym_id) return 'This card belongs to another gym.'
+  if (card.status === 'lost') return 'This card was marked lost and cannot be used.'
+  if (card.status === 'disabled') return 'This card is disabled and cannot be used.'
+  if (card.member_id === memberId) return 'This card is already linked to this member.'
+  if (card.member_id) {
+    const owner = db.members.find((m) => m.member_id === card.member_id)
+    return `This card is already in use by ${owner?.full_name ?? 'another member'}.`
+  }
+  return null
+}
+
+// Both return an error message, or null when the card was linked.
+export function linkCardByUid(memberId: string, uid: string): string | null {
+  const problem = cardProblem(
+    db.cards.find((c) => c.card_uid === uid),
+    memberId,
+  )
+  if (!problem) assignCard(memberId, uid)
+  return problem
+}
+
+export function linkCardByNumber(memberId: string, number: string): string | null {
+  const wanted = number.trim().toUpperCase()
+  const card = db.cards.find((c) => c.card_number?.toUpperCase() === wanted)
+  if (!card) return `No card with the number ${wanted} was found.`
+  return cardProblem(card, memberId) ?? linkCardByUid(memberId, card.card_uid)
+}
+
+export interface UnknownTap {
+  uid: string
+  tappedAt: string
+  scannerName: string
+}
+
+// Unlinked cards tapped recently, newest first, one row per card.
+export function useRecentUnknownTaps(): Query<UnknownTap[]> {
+  const data = useDb()
+  const now = useNow(30_000)
+  const since = now - RECENT_TAPS_HOURS * 3_600_000
+  const taps = new Map<string, UnknownTap>()
+  for (const c of [...data.checkins].sort(newestFirst)) {
+    if (c.result !== 'unknown' || !c.card_uid || taps.has(c.card_uid)) continue
+    if (Date.parse(c.scanned_at) < since) continue
+    const card = data.cards.find((x) => x.card_uid === c.card_uid)
+    // Skip cards that have since been linked or blocked.
+    if (card && (card.status !== 'stock' || card.gym_id !== data.gym.gym_id)) continue
+    taps.set(c.card_uid, {
+      uid: c.card_uid,
+      tappedAt: c.scanned_at,
+      scannerName:
+        data.scanners.find((s) => s.scanner_id === c.scanner_id)?.scanner_name ?? 'Scanner',
+    })
+  }
+  return { data: [...taps.values()], isLoading: false }
+}
+
+// Development only: pretends a card was tapped while the scanner waits to link.
+export function simulateLinkTap(requestId: string, result: LinkResult) {
+  const request = db.linkRequests.find((r) => r.request_id === requestId)
+  if (!request || !isPending(request)) return
+  if (result !== 'linked') {
+    // Like index.ts, a refused card leaves the request pending.
+    setRequest(requestId, { result })
+    return
+  }
+  const stock = db.cards.find((c) => c.gym_id === db.gym.gym_id && c.status === 'stock')
+  const uid = stock?.card_uid ?? `04AA${newId().slice(-10)}`
+  assignCard(request.member_id, uid)
+  setRequest(requestId, { status: 'done', card_uid: uid, result })
 }
 
 // ---------- Development only ----------

@@ -25,3 +25,15 @@ One line per decision, grouped by part.
 - Consent wording covers name, contact details, photo and check-in history, and deletion on request.
 - Pressing Enter in the form means "Save and link card".
 - Errors appear after the first save attempt, and the screen jumps to the first one.
+
+## Part 3: Link card
+- A pending request for the SAME member on that scanner is cancelled and replaced; another member's pending request shows "scanner is busy".
+- Leaving the page cancels a waiting request.
+- With one scanner that is online, waiting starts at once; with several scanners (or an offline one) a confirm screen with the picker comes first.
+- An offline scanner shows the warning and still allows "Start anyway".
+- "Replace card" asks for confirmation as soon as the page opens; "Keep the old card" returns to the profile.
+- Success returns to the profile after 2.5 seconds, with a "Back to profile" button.
+- A simulated "linked" tap uses the first stock card, so the profile shows a card number.
+- Recent taps show one row per card, with the last 4 characters of its UID; stock cards still count as unknown.
+- Card numbers are matched ignoring upper/lower case.
+- Mock only: scanners that start online keep a pretend heartbeat.

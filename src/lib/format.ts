@@ -94,3 +94,14 @@ export function formatTime(value: Timestamp): string {
   // kind of space, so this turns it into a normal one.
   return timeFormat.format(new Date(value)).replace(/\s/g, ' ')
 }
+
+// "just now", "4 min ago", "3 hr ago", "2 days ago"
+export function formatAgo(value: Timestamp, now: number = Date.now()): string {
+  const minutes = Math.floor((now - Date.parse(value)) / 60_000)
+  if (minutes < 1) return 'just now'
+  if (minutes < 60) return `${minutes} min ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours} hr ago`
+  const days = Math.floor(hours / 24)
+  return days === 1 ? '1 day ago' : `${days} days ago`
+}

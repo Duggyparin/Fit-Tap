@@ -46,4 +46,7 @@ export const nfcCards: NfcCard[] = [
   card(214, '04CDEF01234BBC', 'IR-0013', null, 'stock', null),
   card(215, '04DEF012345CCD', 'IR-0014', null, 'stock', null),
   card(216, '04EF0123456DDE', 'IR-0015', null, 'stock', null),
+
+  // Belongs to another gym, to test that it cannot be linked here.
+  { ...card(217, '04F0123456EEF1', 'OT-0001', null, 'stock', null), gym_id: mockId(2), batch_id: null },
 ]

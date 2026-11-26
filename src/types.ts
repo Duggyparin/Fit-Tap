@@ -101,6 +101,9 @@ export interface LinkRequest {
   requested_by: Uuid
   status: LinkRequestStatus
   card_uid: string | null // filled in when a card is tapped
+  // What happened to the tapped card. NOT in schema.sql yet: without it the
+  // website cannot show "already linked" (see docs/schema-todo.md).
+  result: LinkResult | null
   expires_at: Timestamp
 }
 

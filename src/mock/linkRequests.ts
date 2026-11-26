@@ -16,6 +16,7 @@ export const linkRequests: LinkRequest[] = [
     requested_by: STAFF_ID,
     status: 'pending',
     card_uid: null,
+    result: null,
     expires_at: secondsFromNow(45),
   },
   // Finished: how Juan's card was linked.
@@ -27,6 +28,7 @@ export const linkRequests: LinkRequest[] = [
     requested_by: OWNER_ID,
     status: 'done',
     card_uid: '04A1B2C3D4E5F6',
+    result: 'linked',
     expires_at: minutesAgo(160 * 24 * 60 - 1),
   },
 ]

@@ -10,6 +10,8 @@ import {
   Clock,
   CreditCard,
   Snowflake,
+  Wifi,
+  WifiOff,
   type LucideIcon,
 } from 'lucide-react'
 import type { CheckinResult, CheckinSource } from '../types'
@@ -56,6 +58,12 @@ export function daysLeftLook(status: MembershipState, days: number | null): Stat
   if (status === 'frozen' || status === 'cancelled') return MEMBERSHIP_STATUS[status]
   if (days === null) return { ...MEMBERSHIP_STATUS.expired, label: 'No membership' }
   return { ...MEMBERSHIP_STATUS[status], label: daysLeftText(days) }
+}
+
+export function scannerLook(online: boolean): StatusLook {
+  return online
+    ? { tone: 'success', icon: Wifi, label: 'Online' }
+    : { tone: 'danger', icon: WifiOff, label: 'Offline' }
 }
 
 // "offline" taps (a later firmware stage) also come from a scanner.
