@@ -132,7 +132,7 @@ One line per decision, grouped by part.
 - "Send feedback" is in the sidebar and on More, for gym users only.
 - Placeholder prices: setup fee ₱1,500, annual discount 10% (0 to 50 allowed). Changing the billing cycle keeps the due date; the setup fee changes neither due date nor trial status.
 
-## Schema upgrade (migration 20261126000000, written, not applied)
+## Schema upgrade (migration 20261126000000, applied 2026-11-26)
 - One clean migration replaces `supabase/schema.sql` (now deleted); no baseline, since nothing ran on a real project yet.
 - Stay on Free with a 2-minute heartbeat; move to Pro before about 19 scanners. On Free, back up by hand with `supabase db dump` (no automatic backups).
 - The browser only reads (RLS); every write is one database function per action, run in one transaction.

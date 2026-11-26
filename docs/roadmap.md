@@ -14,7 +14,7 @@ AI assistants: treat "Decided" items as fixed. Ask before changing them.
 
 | # | Improvement | Area | Notes | Status |
 |---|---|---|---|---|
-| 11 | Treat stock cards as unknown, not disabled | Scanner | Part of the schema upgrade; fixes recent-taps linking | done (schema written, not applied) |
+| 11 | Treat stock cards as unknown, not disabled | Scanner | Part of the schema upgrade; fixes recent-taps linking | done (schema applied, tested) |
 | 22 | Privacy notice at registration | Privacy | Data Privacy Act; shown with the consent checkbox | done (mock), text is a draft |
 | 9 | Daily backups and a tested restore | Reliability | Free has no automatic backups: back up by hand with `npx supabase db dump` (see "Backups" in schema-todo.md). Daily backups come with Pro. Free projects also pause after 1 week without activity |  |
 | 27 | GCash/Maya QR code shown at payment | Payments | See "Payment QR codes" below | done (mock) |
@@ -24,18 +24,18 @@ AI assistants: treat "Decided" items as fixed. Ask before changing them.
 | 2 | On-site setup and 1-hour staff training | Onboarding | Not software |  |
 | 5 | Support via Messenger with a promised reply time | Support | Not software |  |
 | 24 | Owner feedback: quarterly call and a feedback button | Feedback | Feedback button in the website | done (mock), link is a placeholder |
-| 28 | Scanner heartbeat | Scanner | The scanner pings the server every 2 minutes to update last_seen_at (offline after 5 minutes). The reply also says whether a link request is pending (used by #12). Schema and firmware step | server side done (schema written, not applied); firmware open |
+| 28 | Scanner heartbeat | Scanner | The scanner pings the server every 2 minutes to update last_seen_at (offline after 5 minutes). The reply also says whether a link request is pending (used by #12). Schema and firmware step | server side done (schema applied, tested); firmware open |
 | 23 (minimal) | Anonymize member | Privacy | Owner only, with confirmation. Removes name, phone, email and photo; the name becomes "Former member #123". Payments, memberships and check-ins are kept | done (mock) |
 
 ## Wave 2: once one gym is using it
 
 | # | Improvement | Area | Notes | Status |
 |---|---|---|---|---|
-| 15 | Freeze membership (injury, travel) | Members | See "Freeze membership" below | server side done (schema written, not applied); website buttons open |
+| 15 | Freeze membership (injury, travel) | Members | See "Freeze membership" below | server side done (schema applied, tested); website buttons open |
 | 14 | Renewal reminders by SMS | Members | See "Renewal reminders" below |  |
 | 23 | Full data export per member and per gym, and per-gym deletion | Privacy | Data Privacy Act. "Anonymize member" is done in Wave 1 | |
 | 21 | Monthly summary for the owner (income, check-ins, expiring) | Reports |  |  |
-| 12 | Scanner shows "Tap card to link" while a link request waits | Scanner | Uses the #28 heartbeat reply, which says whether a link request is pending | server side done (schema written, not applied); firmware open, best effort |
+| 12 | Scanner shows "Tap card to link" while a link request waits | Scanner | Uses the #28 heartbeat reply, which says whether a link request is pending | server side done (schema applied, tested); firmware open, best effort |
 | 6 | Read-only "View as gym" for support | Support | Admin area | done (mock) |
 | 13 | Rotate or revoke a scanner token | Scanner | Admin area | done (mock) |
 | 4 | Owner guide in Filipino and Bisaya with short videos | Onboarding | Write after the website is final |  |

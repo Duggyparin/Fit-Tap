@@ -2,22 +2,25 @@
 
 The full database is now one migration:
 `supabase/migrations/20261126000000_fittap_schema.sql`, with the check-in
-function in `supabase/functions/checkin/index.ts`. It is **written but not yet
-applied** to any Supabase project. The old scanner prototype
+function in `supabase/functions/checkin/index.ts`. Both were **applied and
+deployed** to the Fit-Tap project on 2026-11-26, and the rules check passed
+(30 of 30). The old scanner prototype
 `supabase/schema.sql` (build guide v1.3) was deleted; it is still in Git
 history and in the build guide PDF.
 
-Status words: **written** = in the migration, not yet run; **open** = not done.
+Status words: **written** = in the migration (now applied); **open** = not done.
 
 ## Next steps
 
-- [ ] Create a new test project, apply the migration (`supabase db push`), and run the checks in [testing-schema.md](testing-schema.md).
-- [ ] Deploy the check-in function (`supabase functions deploy checkin --no-verify-jwt`) and run the curl test in testing-schema.md.
+- [x] Applied the migration (`npx supabase db push`) and ran the rules check in [testing-schema.md](testing-schema.md): 30 of 30 passed (2026-11-26).
+- [x] Deployed the check-in function (`npx supabase functions deploy checkin --no-verify-jwt`).
+- [ ] Run the end-to-end heartbeat test (part 3 of testing-schema.md).
 - [x] pg_cron 1.6.4 is available on the project. The migration enables it (`create extension if not exists pg_cron`) and schedules the nightly anonymizing job `fittap-anonymize-expired` (2:30 AM Manila).
-- [ ] After applying, check the job exists: `select jobname, schedule from cron.job;`
+- [x] The job exists (`select jobname, schedule from cron.job;`).
 - [ ] Run `deno test supabase/functions/checkin/hash_test.ts` (Deno is not installed on this PC yet).
 - [x] Deleted `supabase/schema.sql`.
-- [ ] Make the first manual backup (see "Backups" below).
+- [x] Made the platform admin account (`app_user`, role `platform_admin`).
+- [x] First manual backup (2026-11-26), with Docker Desktop installed for `db dump`.
 
 ## Written in the migration
 
@@ -110,13 +113,16 @@ day, or 26,100 a month, per scanner**.
 Free has **no automatic backups**, and a free project pauses after 1 week
 without activity. Until FitTap moves to Pro (daily backups included), back up
 by hand at least once a week and before every migration. Run from the project
-folder after `npx supabase link` (the CLI needs Docker Desktop running for
-`db dump`):
+folder after `npx supabase link`. `db dump` runs `pg_dump` inside Docker, so
+**Docker Desktop must be installed and running** (without it: "docker:
+command not found"):
 
 ```
-npx supabase db dump --linked -f fittap-schema-YYYY-MM-DD.sql
-npx supabase db dump --linked --data-only -f fittap-data-YYYY-MM-DD.sql
+npx supabase db dump --remote -f fittap-schema-YYYY-MM-DD.sql
+npx supabase db dump --remote --data-only -f fittap-data-YYYY-MM-DD.sql
 ```
+
+(`--linked` still works but is deprecated; use `--remote`.)
 
 - The first file is the tables and functions, the second is the rows. A
   dump without `--data-only` has **no data**.

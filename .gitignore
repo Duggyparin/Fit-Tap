@@ -29,3 +29,6 @@ firmware/gym_scanner/secrets.h
 # Database backups hold member data: keep them outside the repo
 fittap-schema-*.sql
 fittap-data-*.sql
+
+# Supabase CLI link cache (project ref, versions)
+supabase/.temp/
