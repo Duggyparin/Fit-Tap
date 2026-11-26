@@ -1,6 +1,6 @@
 // Types for the website, based on the FULL ERD in the project plan (v1.3).
-// supabase/schema.sql is still the smaller scanner prototype; the gaps are
-// listed in docs/schema-todo.md.
+// The database is supabase/migrations/20261126000000_fittap_schema.sql;
+// open items are listed in docs/schema-todo.md.
 //
 // Conventions:
 // - IDs are UUID strings.
@@ -168,8 +168,8 @@ export interface LinkRequest {
   requested_by: Uuid
   status: LinkRequestStatus
   card_uid: string | null // filled in when a card is tapped
-  // What happened to the tapped card. NOT in schema.sql yet: without it the
-  // website cannot show "already linked" (see docs/schema-todo.md).
+  // What happened to the tapped card, saved by the scanner tap so the
+  // website can show "already linked", "other gym" or "blocked".
   result: LinkResult | null
   expires_at: Timestamp
 }

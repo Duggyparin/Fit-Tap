@@ -16,7 +16,7 @@ AI assistants: treat "Decided" items as fixed. Ask before changing them.
 |---|---|---|---|---|
 | 11 | Treat stock cards as unknown, not disabled | Scanner | Part of the schema upgrade; fixes recent-taps linking | done (schema written, not applied) |
 | 22 | Privacy notice at registration | Privacy | Data Privacy Act; shown with the consent checkbox | done (mock), text is a draft |
-| 9 | Daily backups and a tested restore | Reliability |  |  |
+| 9 | Daily backups and a tested restore | Reliability | Free has no automatic backups: back up by hand with `npx supabase db dump` (see "Backups" in schema-todo.md). Daily backups come with Pro. Free projects also pause after 1 week without activity |  |
 | 27 | GCash/Maya QR code shown at payment | Payments | See "Payment QR codes" below | done (mock) |
 | 3 | Onboarding checklist per gym | Onboarding | Admin area. "Scanner checked in at least once" stays ticked | done (mock) |
 | 7 | Health alerts: scanner offline, gym inactive 3+ days, overdue | Reliability | Admin area. Real alerts need the #28 heartbeat | done (mock) |

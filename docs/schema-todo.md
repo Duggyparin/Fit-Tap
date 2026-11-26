@@ -3,8 +3,9 @@
 The full database is now one migration:
 `supabase/migrations/20261126000000_fittap_schema.sql`, with the check-in
 function in `supabase/functions/checkin/index.ts`. It is **written but not yet
-applied** to any Supabase project. `supabase/schema.sql` is the old scanner
-prototype (build guide v1.3) and is no longer used.
+applied** to any Supabase project. The old scanner prototype
+`supabase/schema.sql` (build guide v1.3) was deleted; it is still in Git
+history and in the build guide PDF.
 
 Status words: **written** = in the migration, not yet run; **open** = not done.
 
@@ -15,7 +16,8 @@ Status words: **written** = in the migration, not yet run; **open** = not done.
 - [x] pg_cron 1.6.4 is available on the project. The migration enables it (`create extension if not exists pg_cron`) and schedules the nightly anonymizing job `fittap-anonymize-expired` (2:30 AM Manila).
 - [ ] After applying, check the job exists: `select jobname, schedule from cron.job;`
 - [ ] Run `deno test supabase/functions/checkin/hash_test.ts` (Deno is not installed on this PC yet).
-- [ ] Decide whether to delete `supabase/schema.sql` or keep it only as a reference for the build guide.
+- [x] Deleted `supabase/schema.sql`.
+- [ ] Make the first manual backup (see "Backups" below).
 
 ## Written in the migration
 
@@ -98,10 +100,33 @@ day, or 26,100 a month, per scanner**.
 | 30 | about 783,000 | about 1,431,000 |
 | 50 | about 1,305,000 | about 2,385,000 |
 
-- **Verify:** these limits are from memory and change: Supabase Free has about **500,000** Edge Function invocations a month, and Pro includes about **2 million**, then charges per extra million. Check the pricing page.
-- With a 2-minute heartbeat, Free covers about **19 scanners**; 30 or 50 scanners need Pro. A 1-minute heartbeat would nearly use up Free at 10 scanners.
+- Confirmed on supabase.com/pricing (Nov 2026): Free = **500,000** Edge Function calls a month; Pro ($25 a month) = **2 million**, then $2 per extra million.
+- With a 2-minute heartbeat, Free covers about **19 scanners**: **move to Pro before reaching ~19 scanners.** 30 or 50 scanners fit in Pro. A 1-minute heartbeat would nearly use up Free at 10 scanners.
 - Decision: heartbeat every **2 minutes**; the website shows a scanner as offline after **5 minutes** (`SCANNER_ONLINE_MINUTES`); the admin "scanner offline" alert stays at 30 minutes.
 - If costs grow: send heartbeats only during opening hours, or count a tap as a heartbeat (skip the next one after a tap).
+
+## Backups (roadmap #9)
+
+Free has **no automatic backups**, and a free project pauses after 1 week
+without activity. Until FitTap moves to Pro (daily backups included), back up
+by hand at least once a week and before every migration. Run from the project
+folder after `npx supabase link` (the CLI needs Docker Desktop running for
+`db dump`):
+
+```
+npx supabase db dump --linked -f fittap-schema-YYYY-MM-DD.sql
+npx supabase db dump --linked --data-only -f fittap-data-YYYY-MM-DD.sql
+```
+
+- The first file is the tables and functions, the second is the rows. A
+  dump without `--data-only` has **no data**.
+- Member photos and QR pictures are in Storage and are **not** in the dump.
+  Download the `member-photos` and `payment-qr` buckets separately.
+- The data file holds names, phone numbers and payments: **never put it in
+  the repo** (or any folder inside it). Keep it in a private, encrypted
+  place outside the project, for example an encrypted drive or a private
+  cloud folder only the owner of FitTap can open, and keep the last few weeks.
+- [ ] Test a restore once on a new empty project (Wave 1, #9: "a tested restore").
 
 ## Tooling
 

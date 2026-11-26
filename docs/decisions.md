@@ -133,7 +133,8 @@ One line per decision, grouped by part.
 - Placeholder prices: setup fee ₱1,500, annual discount 10% (0 to 50 allowed). Changing the billing cycle keeps the due date; the setup fee changes neither due date nor trial status.
 
 ## Schema upgrade (migration 20261126000000, written, not applied)
-- One clean migration replaces `supabase/schema.sql`; no baseline, since nothing ran on a real project yet.
+- One clean migration replaces `supabase/schema.sql` (now deleted); no baseline, since nothing ran on a real project yet.
+- Stay on Free with a 2-minute heartbeat; move to Pro before about 19 scanners. On Free, back up by hand with `supabase db dump` (no automatic backups).
 - The browser only reads (RLS); every write is one database function per action, run in one transaction.
 - Suspended gym: the scanner keeps working; owner and staff can only read; the website shows a banner.
 - Staff see only today's payments and walk-ins, plus a member's latest payment through `member_latest_payment`. The owner sees everything.

@@ -25,3 +25,7 @@ dist-ssr
 
 # Scanner secrets (Wi-Fi password, scanner token)
 firmware/gym_scanner/secrets.h
+
+# Database backups hold member data: keep them outside the repo
+fittap-schema-*.sql
+fittap-data-*.sql
