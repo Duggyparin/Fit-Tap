@@ -13,7 +13,7 @@ export default function TopBar() {
     .join('')
 
   return (
-    <header className="sticky top-0 z-10 hidden items-center justify-between gap-6 border-b border-line bg-card px-8 py-3 lg:flex">
+    <header className="hidden items-center justify-between gap-6 border-b border-line bg-card px-8 py-3 lg:flex">
       <label className="flex min-h-11 w-full max-w-md items-center gap-2 rounded-lg border border-line bg-page px-3 text-ink-muted focus-within:border-primary">
         <Icon icon={Search} size={18} />
         <input

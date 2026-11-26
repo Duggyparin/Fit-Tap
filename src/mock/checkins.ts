@@ -1,6 +1,6 @@
 import type { Checkin, CheckinResult, CheckinSource } from '../types'
 import { GYM_ID } from './gym'
-import { minutesAgo, mockId } from './helpers'
+import { todayMinutesAgo, mockId } from './helpers'
 import { M } from './members'
 import { BACK_DOOR_ID, FRONT_DOOR_ID } from './scanners'
 
@@ -13,7 +13,7 @@ function checkin(
   source: CheckinSource,
   scanner_id: string | null = source === 'manual' ? null : FRONT_DOOR_ID,
 ): Checkin {
-  const at = minutesAgo(minutes)
+  const at = todayMinutesAgo(minutes)
   return {
     checkin_id: mockId(n),
     gym_id: GYM_ID,

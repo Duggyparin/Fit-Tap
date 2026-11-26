@@ -1,7 +1,7 @@
 import type { WalkIn } from '../types'
 import { OWNER_ID, STAFF_ID } from './appUsers'
 import { GYM_ID } from './gym'
-import { minutesAgo, mockId, pesos } from './helpers'
+import { todayMinutesAgo, mockId, pesos } from './helpers'
 
 // Today's pay-per-visit guests. No card, no member record.
 export const walkIns: WalkIn[] = [
@@ -12,7 +12,7 @@ export const walkIns: WalkIn[] = [
     amount_centavos: pesos(100),
     method: 'cash',
     reference_no: null,
-    visited_at: minutesAgo(12),
+    visited_at: todayMinutesAgo(12),
     recorded_by: STAFF_ID,
   },
   {
@@ -22,7 +22,7 @@ export const walkIns: WalkIn[] = [
     amount_centavos: pesos(100),
     method: 'gcash',
     reference_no: 'REF903114',
-    visited_at: minutesAgo(48),
+    visited_at: todayMinutesAgo(48),
     recorded_by: STAFF_ID,
   },
   {
@@ -32,7 +32,7 @@ export const walkIns: WalkIn[] = [
     amount_centavos: pesos(100),
     method: 'maya',
     reference_no: 'REF903587',
-    visited_at: minutesAgo(102),
+    visited_at: todayMinutesAgo(102),
     recorded_by: OWNER_ID,
   },
   {
@@ -42,7 +42,7 @@ export const walkIns: WalkIn[] = [
     amount_centavos: pesos(100),
     method: 'cash',
     reference_no: null,
-    visited_at: minutesAgo(165),
+    visited_at: todayMinutesAgo(165),
     recorded_by: STAFF_ID,
   },
 ]

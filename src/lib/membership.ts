@@ -43,3 +43,19 @@ export function membershipState(
   if (isExpiring(m.end_date, today)) return 'expiring'
   return 'active'
 }
+
+// Can this member get in today? Looks at ALL of one member's memberships.
+// - Any frozen membership that has not ended: frozen.
+// - Otherwise the LATEST end date counts, so someone who already renewed is not
+//   "expiring" just because the current period ends soon.
+// - Nothing running (expired, cancelled or no membership): expired.
+export function memberAccess(
+  memberships: Pick<Membership, 'status' | 'end_date'>[],
+  today: DateString = todayInManila(),
+): 'active' | 'expiring' | 'expired' | 'frozen' {
+  const running = memberships.filter((m) => m.status !== 'cancelled' && m.end_date >= today)
+  if (running.some((m) => m.status === 'frozen')) return 'frozen'
+  if (running.length === 0) return 'expired'
+  const lastEnd = running.map((m) => m.end_date).sort().at(-1)!
+  return isExpiring(lastEnd, today) ? 'expiring' : 'active'
+}

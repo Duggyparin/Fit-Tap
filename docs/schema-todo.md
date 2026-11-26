@@ -46,6 +46,7 @@ file. Do not edit `schema.sql` in place.
 - [ ] Frozen memberships: if the member's newest membership is frozen, answer `allowed: false, reason: 'frozen'` and save the check-in with result `'frozen'`. Firmware `handleResult()` then needs a "Membership frozen" message.
 - [ ] Use `membership.gym_id` once it exists (today it trusts that the member belongs to the scanner's gym).
 - [ ] Linking a card from stock: also set `assigned_at`.
+- [ ] **Stock cards must count as unknown.** Today any card whose status is not `active` answers `disabled`. Once new cards start as `stock`, tapping an unlinked card would say "Card disabled" and would be missing from "recent unknown taps". Treat `stock` like an unknown card (result `'unknown'`).
 
 ## Row Level Security
 

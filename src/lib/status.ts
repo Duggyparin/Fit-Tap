@@ -8,6 +8,7 @@ import {
   CircleSlash,
   CircleX,
   Clock,
+  CreditCard,
   Snowflake,
   type LucideIcon,
 } from 'lucide-react'
@@ -38,6 +39,23 @@ export const CHECKIN_STATUS: Record<CheckinResult, StatusLook> = {
   frozen: { tone: 'danger', icon: Snowflake, label: 'Frozen' },
   disabled: { tone: 'danger', icon: Ban, label: 'Card disabled' },
   unknown: { tone: 'muted', icon: CircleQuestionMark, label: 'Unknown card' },
+}
+
+export const NO_CARD_STATUS: StatusLook = { tone: 'muted', icon: CreditCard, label: 'No card' }
+
+// "23 days left", "1 day left", "Last day today", "Expired 6 days ago"
+export function daysLeftText(days: number): string {
+  if (days === 0) return 'Last day today'
+  const count = `${Math.abs(days)} ${Math.abs(days) === 1 ? 'day' : 'days'}`
+  return days > 0 ? `${count} left` : `Expired ${count} ago`
+}
+
+// The badge for "how long does this member have left?"
+export function daysLeftLook(status: MembershipState, days: number | null): StatusLook {
+  // Frozen and cancelled memberships are not counting down.
+  if (status === 'frozen' || status === 'cancelled') return MEMBERSHIP_STATUS[status]
+  if (days === null) return { ...MEMBERSHIP_STATUS.expired, label: 'No membership' }
+  return { ...MEMBERSHIP_STATUS[status], label: daysLeftText(days) }
 }
 
 // "offline" taps (a later firmware stage) also come from a scanner.

@@ -22,6 +22,18 @@ export function minutesAgo(minutes: number): Timestamp {
   return new Date(Date.now() - minutes * 60_000).toISOString()
 }
 
+// Like minutesAgo, but never earlier than today's midnight in Manila, for data
+// that must count as "today". Shortly after midnight the times are squeezed
+// into the hours that have passed, which keeps them in the same order.
+const OLDEST_TODAY_MINUTES = 200
+
+export function todayMinutesAgo(minutes: number): Timestamp {
+  const midnight = Date.parse(`${todayInManila()}T00:00:00+08:00`)
+  const minutesToday = (Date.now() - midnight) / 60_000
+  const scale = Math.min(1, minutesToday / OLDEST_TODAY_MINUTES)
+  return minutesAgo(minutes * scale)
+}
+
 // A timestamp this many seconds after now (for link request expiry).
 export function secondsFromNow(seconds: number): Timestamp {
   return new Date(Date.now() + seconds * 1000).toISOString()
