@@ -45,3 +45,8 @@ One line per decision, grouped by part.
 - The amount can be edited; picking another plan resets it to that plan's price.
 - Renewing a frozen member is allowed, with a note that they stay frozen until unfrozen.
 - Date ranges show the first year only when it differs from the last day's year.
+
+## Part 5: Walk-in
+- After saving, the form resets for the next guest and shows a confirmation line.
+- The shown time updates live; the saved time is taken at the moment of saving.
+- The default price is a gym setting held in memory (starts at ₱100).
