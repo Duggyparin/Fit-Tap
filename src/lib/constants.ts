@@ -8,8 +8,9 @@ export const EXPIRING_DAYS = 7
 
 // Link mode: how long the scanner waits for a card (the database default).
 export const LINK_SECONDS = 60
-// A scanner is "online" if it was heard from this recently.
-export const SCANNER_ONLINE_MINUTES = 2
+// A scanner is "online" if it was heard from this recently. The scanner sends
+// a heartbeat every 2 minutes (roadmap #28), so one missed beat is tolerated.
+export const SCANNER_ONLINE_MINUTES = 5
 // How far back "Choose from recent taps" looks.
 export const RECENT_TAPS_HOURS = 3
 

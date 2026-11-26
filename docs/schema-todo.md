@@ -1,115 +1,109 @@
 # Schema to-do
 
-`supabase/schema.sql` and `supabase/functions/checkin/index.ts` are still the
-**scanner prototype** (build guide v1.3). The website's types (`src/types.ts`)
-and mock data already follow the **full ERD** in the project plan (v1.3).
-These are the changes to make in the schema-upgrade step, as a new migration
-file. Do not edit `schema.sql` in place.
+The full database is now one migration:
+`supabase/migrations/20261126000000_fittap_schema.sql`, with the check-in
+function in `supabase/functions/checkin/index.ts`. It is **written but not yet
+applied** to any Supabase project. `supabase/schema.sql` is the old scanner
+prototype (build guide v1.3) and is no longer used.
 
-## New tables
+Status words: **written** = in the migration, not yet run; **open** = not done.
 
-- [ ] `plan`: plan_id, gym_id, plan_name, duration_days, price_centavos, is_active
-- [ ] `payment`: payment_id, membership_id, amount_centavos, method, reference_no, paid_at, recorded_by
-- [ ] `app_user`: user_id (= Supabase Auth user), gym_id (null only for platform admin), role (owner | staff | platform_admin), display_name, email, is_active
-- [ ] `card_batch`: batch_id, gym_id, quantity, chip_type, design_url, price_centavos, status (ordered | printing | shipped | received), ordered_at
+## Next steps
 
-## Changes to existing tables
+- [ ] Create a new test project, apply the migration (`supabase db push`), and run the checks in [testing-schema.md](testing-schema.md).
+- [ ] Deploy the check-in function (`supabase functions deploy checkin --no-verify-jwt`) and run the curl test in testing-schema.md.
+- [x] pg_cron 1.6.4 is available on the project. The migration enables it (`create extension if not exists pg_cron`) and schedules the nightly anonymizing job `fittap-anonymize-expired` (2:30 AM Manila).
+- [ ] After applying, check the job exists: `select jobname, schedule from cron.job;`
+- [ ] Run `deno test supabase/functions/checkin/hash_test.ts` (Deno is not installed on this PC yet).
+- [ ] Decide whether to delete `supabase/schema.sql` or keep it only as a reference for the build guide.
 
-- [ ] `gym`: add slug (unique), logo_url, brand_color, timezone, status (trial | active | suspended), created_at
-- [ ] `scanner`: add firmware_version, `is_default boolean not null default false`; at most one default per gym (partial unique index on gym_id where is_default)
-- [ ] `member`: add phone, email, photo_url, consent_at, status (active | archived), created_at
-- [ ] `nfc_card`: add batch_id, assigned_at; change default status from `'active'` to `'stock'`
-- [ ] `membership`: add gym_id and plan_id; status becomes `active | frozen | cancelled` (see "Expired is derived" below)
-- [ ] `checkin`: make `card_uid` nullable (manual check-ins have no card); add `synced_at`; add `'frozen'` to the result values
-- [ ] `link_request`: add requested_by; allow only ONE pending request per scanner (partial unique index on scanner_id where status = 'pending')
-- [ ] `walk_in`: add recorded_by
-- [ ] Add `check` constraints for every status, result, source and method column so bad values are refused
+## Written in the migration
 
-## Expired is derived, not stored
+### Tables
+- [x] New: `app_user`, `plan`, `payment` (with gym_id, so RLS is simple), `card_batch`, `gym_payment`, `audit_log`, `gym_audit_log`.
+- [x] `gym`: slug, branding, timezone, status (trial | active | suspended), city, billing (monthly fee, next due date, billing cycle, annual discount, setup fee and when it was paid), privacy contact, walk-in default price, expiring days, payment QR file paths, member number counter.
+- [x] `scanner`: gym optional (spares and repairs), firmware version, hardware status, one default per gym, token hash optional and never readable from the browser.
+- [x] `member`: phone (09XX XXX XXXX), email, photo path, consent time and **consent version**, member number per gym, archived status, anonymized time. Phone and photo required until anonymized.
+- [x] `nfc_card`: batch, assigned time, new cards start as **stock**, printed number unique per gym, one active card per member.
+- [x] `membership`: gym and plan, freeze fields (when, why, who). Status active | frozen | cancelled; **expired is derived** from end_date. end_date must not be before start_date.
+- [x] `checkin`: card optional for manual check-ins, synced time, `frozen` result; manual check-ins have no scanner or card.
+- [x] `link_request`: who asked, **result** (linked | already_linked | other_gym | blocked) and tapped card saved for the website; one pending request per scanner.
+- [x] `walk_in`: who recorded it. GCash and Maya payments need a reference number.
+- [x] Audit logs are append only (no update, delete or truncate).
+- [x] Composite foreign keys keep each member, membership, payment, card and link request inside one gym.
+- [x] Indexes for check-in feeds, reports and audit logs.
 
-- `membership.status` will not include `'expired'`. A membership is expired when `end_date < today` in Asia/Manila.
-- `index.ts` already decides access by `end_date >= today` (Manila), so the scanner keeps working without a stored status.
-- The website uses `membershipState()` in `src/lib/membership.ts` for the same rule.
-- Migration: change any existing `status = 'expired'` rows to `'active'` before adding the check constraint.
+### Rules
+- [x] **#11** A stock card, or any card not linked to a member, is **unknown** at the scanner, so it appears in "recent unknown taps".
+- [x] **#28** `scanner_heartbeat` updates `last_seen_at` and the firmware version, and replies whether a link request is pending (**#12**, best effort).
+- [x] **#15** Entry is denied only if the membership covering today is frozen. A frozen membership counts from its start date whatever its end date, because unfreezing moves the end date forward by the days frozen (and any queued renewals with it). Freezing needs a reason; the reason is not written to the log (it may be about health).
+- [x] **end_date inclusive**: register and renew use `start + duration_days - 1`; renewals start the day after the latest active or frozen membership that has not ended.
+- [x] Link mode never turns a lost or disabled card back on (`blocked`), and a membership bought in advance no longer lets someone in before its start date.
+- [x] Every write is a database function in one transaction: register (member + membership + payment), renew, manual check-in (the server checks the membership), link card (by UID or printed number, "other gym" without showing that gym's card), mark card lost, walk-in, freeze and unfreeze, plans, settings, default scanner, payment QR codes, anonymize.
+- [x] Admin functions write the audit log in the same transaction: add gym, record gym payment (subscription or setup fee), billing cycle, suspend (only after the 7-day grace) and reactivate, register scanner, rotate token, revoke scanner, default scanner, card batch status, register batch.
+- [x] Scanner tokens are created and rotated **on the server** (`new_scanner_token`): 24 random bytes as 48 hex characters, stored only as SHA-256 lowercase hex, the same format `index.ts` computes.
+- [x] Anonymizing (owner only): name becomes "Former member #N", phone, email and photo path cleared, cards disabled, link requests cancelled, gym audit log written. Payment reference numbers are kept.
+- [x] `anonymize_expired()` for the nightly job: 1 year after the last membership ends (or registration if there was none).
 
-## end_date is inclusive
+### Security
+- [x] RLS: the browser can only **read**, and only its own gym; the platform admin reads everything. All writes go through the functions above.
+- [x] Money: the owner reads all payments and walk-ins; **staff only today's** (Manila), plus `member_latest_payment` for the member they open. Gym bills and the gym activity log: owner and admin. Admin audit log: admin only.
+- [x] Suspended gym: owner and staff can read but every write function refuses (`gym_suspended`); the scanner keeps working.
+- [x] "View as gym" is read-only in the database: the admin has no gym, so every gym write function refuses (`not_allowed`).
+- [x] Inactive accounts (`is_active = false`) get nothing.
+- [x] Every SECURITY DEFINER function sets `search_path = ''` and checks the caller itself. EXECUTE is revoked from everyone, then granted only where needed: website functions to `authenticated`; `scanner_tap` and `scanner_heartbeat` **only** to `service_role`; internal helpers to no one.
+- [x] Logged-out visitors (`anon`) have no table access.
+- [x] Storage: private buckets `member-photos` (200 KB, JPEG/PNG) and `payment-qr` (1 MB), one folder per gym. Owner and staff upload photos; only the owner uploads or deletes QR codes or deletes photos. No update policies: each upload gets a new file name, and `set_qr_code` logs each change.
 
-- `end_date` is the **last day the member may enter**: `end_date = start_date + duration_days - 1`. A Daily pass bought today works today only; Monthly from Nov 26 ends Dec 25.
-- `index.ts` needs no change: it already allows entry while `end_date >= today`.
-- Renewal start: if the current membership is active or frozen and `end_date >= today`, the new one starts on `end_date + 1` (no lost days); otherwise it starts today in Manila.
-- The website uses `endDateFor()` and `renewalStartFor()` in `src/lib/membership.ts`.
-- [ ] Update the build guide's test data (Step 6.3): `current_date + 30` gives 31 days of access; use `current_date + 29` for a 30-day plan.
-- [ ] If the database ever calculates end dates (a function or trigger), use the same `+ duration_days - 1` rule.
+## Open: server side
 
-## index.ts changes
+- [ ] **Owner invites**: an Edge Function using the Supabase Auth admin API (service key on the server only) that the admin calls to invite an owner, creating the `app_user` row. Also resend invite and set `accepted_at`.
+- [ ] **Photo cleanup**: a small scheduled Edge Function that deletes files in `member-photos` with no matching `member.photo_url` (orphans left by automatic anonymizing or abandoned registrations).
+- [ ] Moving scanners between stock, gym and repair (`hardware_status`, `gym_id`) has no function yet.
+- [ ] Offline check-ins (Wave 3, #10): a `scanner_sync` function that accepts queued check-ins with their own `checkin_id` and ignores ones already saved.
+- [ ] Supabase grants new tables to `anon` and `authenticated` by default: every later migration must repeat the revoke/grant pattern at the end of this one.
+- [ ] Update the build guide's test data (Step 6.3): use `current_date + 29` for a 30-day plan.
 
-- [ ] Frozen memberships (roadmap #15 rule): if the membership **covering today** is frozen, answer `allowed: false, reason: 'frozen'` and save the check-in with result `'frozen'`. Firmware `handleResult()` then needs a "Membership frozen" message.
-- [ ] Use `membership.gym_id` once it exists (today it trusts that the member belongs to the scanner's gym).
-- [ ] Linking a card from stock: also set `assigned_at`.
-- [ ] **Stock cards must count as unknown.** Today any card whose status is not `active` answers `disabled`. Once new cards start as `stock`, tapping an unlinked card would say "Card disabled" and would be missing from "recent unknown taps". Treat `stock` like an unknown card (result `'unknown'`).
+## Open: website (when it switches from mock data to Supabase)
 
-## Row Level Security
+- [ ] Replace `src/lib/data.ts` and `src/lib/adminData.ts` writes with calls to the database functions, and map their error words (`not_allowed`, `gym_suspended`, `scanner_busy`, `member_has_card`, `membership_frozen`, `membership_expired`, `not_overdue`, ...) to messages.
+- [ ] Show a banner on every gym screen while the gym is suspended, and disable the save buttons.
+- [ ] Staff screens: hide income and reports, and load a member's latest payment with `member_latest_payment` instead of the full payment history.
+- [ ] Match the freeze rule in `memberAccess()` (`src/lib/membership.ts`): today it denies when *any* running membership is frozen; the server uses "a frozen membership that has started". Add freeze and unfreeze buttons (Wave 2).
+- [ ] Link card: show the new `blocked` result ("Card is lost or disabled"); link by card number now returns `not_found` for another gym's number (numbers are only unique within a gym).
+- [ ] Uploads: give every photo and QR picture a new file name (`<gym_id>/<random>.jpg`); delete the old photo file before calling `anonymize_member`.
+- [ ] Gym audit log: add the new actions `membership_frozen` and `membership_unfrozen`.
 
-- [ ] Policies for website staff logins: each user reads and writes only rows where `gym_id` matches their `app_user.gym_id`.
-- [ ] `payment` has no gym_id: either add one, or write its policy through `membership`.
-- [ ] Test: log in as Gym A and try to read Gym B's members.
+## Open: firmware (not changed yet)
 
-## Needed by the website screens
+- [ ] Send a heartbeat every **2 minutes**: `POST {"type":"heartbeat","firmware":"1.4.0"}` with the `x-scanner-token` header, outside the card-reading path so taps are never delayed.
+- [ ] When the heartbeat reply has `"pending_link": true`, show "Tap card to link" (and the member's first name) until the next heartbeat or tap. Best effort: with a 2-minute heartbeat the message may appear late or not at all; linking still works by tapping within the 60 seconds.
+- [ ] Show "Membership frozen" for `reason: "frozen"`.
+- [ ] Show "Card is lost or disabled" for link-mode `reason: "blocked"`.
+- [ ] Never fall back to "Other gym's card" for an unexpected reason: show "See front desk" instead.
+- [ ] On HTTP 401 show "Scanner revoked / See front desk" (token wrong, rotated or revoked).
+- [ ] Raise the firmware version to 1.4.0.
+- [ ] Before a pilot: replace `setInsecure()` with `setCACert()`.
 
-### Blocking: these screens cannot work for real without them
+## Heartbeat cost
 
-- [ ] **Link results never reach the website.** For `already_linked` and `other_gym`, `index.ts` answers only the scanner and leaves the request `pending`, so the website would just time out. Add `link_request.result` (linked | already_linked | other_gym) plus the tapped `card_uid`, and write them in `index.ts`. `src/types.ts` and the mock data already include `result`.
-- [ ] **Scanner heartbeat (roadmap #28).** `last_seen_at` is updated only when a card is tapped, so an idle scanner would show "Offline" after 2 minutes (Dashboard, Scanners, Link card warning, admin alerts). The firmware pings the server every 60 s; the server updates `last_seen_at` and replies whether a link request is pending, so the same ping powers #12 "Tap card to link".
-- [ ] **Other gym's cards are invisible to the website under RLS.** Linking by card number or recent tap needs a database function (RPC) that checks all gyms and answers "belongs to another gym" without exposing the row. Inserting a UID that another gym owns must fail with that message.
+Assumptions: every Edge Function call counts as one invocation; a heartbeat
+every 2 minutes is 720 calls a day; a busy small gym's scanner adds about 150
+taps a day (check-ins, denied and unknown taps). That is about **870 calls a
+day, or 26,100 a month, per scanner**.
 
-### Data integrity
+| Scanners | Calls a month (2-min heartbeat) | Calls a month (1-min heartbeat) |
+|---|---|---|
+| 10 | about 261,000 | about 477,000 |
+| 30 | about 783,000 | about 1,431,000 |
+| 50 | about 1,305,000 | about 2,385,000 |
 
-- [ ] One card per member at a time: partial unique index on `nfc_card (member_id)` where status = 'active'.
-- [ ] Link, replace, register (member + membership + payment) and renew (membership + payment) should each be one transaction (RPC), so a dropped connection cannot save half.
-- [ ] Manual check-in: staff may insert only `source = 'manual'` rows, and the server should confirm the membership allows entry.
-- [ ] `nfc_card.card_number`: unique per gym.
-- [ ] `plan`: unique name per gym; keep at least one active plan.
-- [ ] `member.phone`: check the format `09XX XXX XXXX` (or store digits only).
-
-### Settings, photos, roles and reports
-
-- [ ] `gym`: add `walk_in_default_centavos` and `expiring_days` (today: constants and in-memory settings).
-- [ ] Member photos: private storage bucket; store the path in `photo_url` and show it with short-lived signed links.
-- [ ] Income is owner-only in the website; enforce it with RLS on `payment` (and decide what staff may read in `walk_in`, since they record walk-ins and see today's total).
-- [ ] Refuse writes from users with `app_user.is_active = false`.
-- [ ] Indexes for reports: `payment (paid_at)`, `walk_in (gym_id, visited_at)`.
-
-## Platform admin (Part 10)
-
-- [ ] `app_user`: role `platform_admin` (gym_id null); add `invited_at`, `accepted_at`; email unique.
-- [ ] `gym`: add `city`, `monthly_fee_centavos`, `next_due_date`; status stays trial | active | suspended (grace and overdue are derived from the due date).
-- [ ] New table `gym_payment`: gym_payment_id, gym_id, amount_centavos, method, reference_no, paid_at, covers_due_date, recorded_by.
-- [ ] New table `audit_log`: audit_id, actor_user_id, action, gym_id, detail, created_at. Insert only (no update or delete), written by the server in the same transaction as the action. Never store tokens in it.
-- [ ] `scanner`: gym_id nullable (stock and repair); add `hardware_status` (in_stock | at_gym | in_repair); rotation replaces `token_hash`; revoking sets status disabled and the check-in function refuses it.
-- [ ] Scanner token creation and rotation must run in a **server-side function**, never in the browser. It returns the token once and stores only its SHA-256 hash. (The website only mocks this.)
-- [ ] `card_batch.status`: use the values above. Only admins insert or update batches and register cards; owners read their own.
-- [ ] RLS: platform admins see all gyms; owners and staff only their gym. "View as gym" must be read-only in the database too (for example admins have no write policy on gym tables), because disabled buttons are not security.
-- [ ] Invites need a server-side function (Supabase Auth admin API uses the service key).
-- [ ] Decide what suspension does to a gym: block staff logins, the scanner check-in, or neither.
-
-## Roadmap Part 11 (privacy, QR codes, pricing)
-
-- [ ] `member`: add `consent_version`, `anonymized_at` and a per-gym `member_number`; allow empty phone and photo only for anonymized rows.
-- [ ] Anonymizing (RPC, owner only) in one transaction: clear name, phone, email and photo, delete the photo file from storage, disable cards, cancel link requests, write the gym audit log. Also decide what to do with payment reference numbers.
-- [ ] Scheduled server job: anonymize members 1 year after their last membership ends.
-- [ ] New table `gym_audit_log`: gym_audit_id, gym_id, actor_user_id (null = system), action, detail, created_at. Insert only, written by the server.
-- [ ] Payment QR codes: private storage bucket, paths on `gym`; only the owner may write; log every change on the server.
-- [ ] `gym`: `privacy_contact_name`, `privacy_contact_detail`.
-- [ ] `gym`: `billing_cycle` (monthly | annual), `annual_discount_percent`, `setup_fee_centavos`, `setup_fee_paid_at`. `gym_payment`: `kind` (subscription | setup).
-
-## Freeze rule (roadmap #15, Wave 2)
-
-- [ ] Deny entry only if the membership covering today is frozen; store the freeze reason, who and when; on unfreeze move `end_date` forward by the days frozen (and any queued renewals after it). The website's `memberAccess()` still denies when *any* running membership is frozen: change it with this work.
+- **Verify:** these limits are from memory and change: Supabase Free has about **500,000** Edge Function invocations a month, and Pro includes about **2 million**, then charges per extra million. Check the pricing page.
+- With a 2-minute heartbeat, Free covers about **19 scanners**; 30 or 50 scanners need Pro. A 1-minute heartbeat would nearly use up Free at 10 scanners.
+- Decision: heartbeat every **2 minutes**; the website shows a scanner as offline after **5 minutes** (`SCANNER_ONLINE_MINUTES`); the admin "scanner offline" alert stays at 30 minutes.
+- If costs grow: send heartbeats only during opening hours, or count a tap as a heartbeat (skip the next one after a tap).
 
 ## Tooling
 
-- [ ] `supabase/` is excluded from ESLint (it is Deno code, not browser code). Add Deno lint and type checking for it later (`deno lint`, `deno check supabase/functions/checkin/index.ts`).
-
-## Planned with the heartbeat
-
-- **Scanner "Tap card to link" (roadmap #12).** Today the firmware only learns about a link request when a card is tapped. The #28 heartbeat reply will tell it a request is pending.
+- [ ] `supabase/` is excluded from ESLint (Deno code). Add `deno lint` and `deno check supabase/functions/checkin/index.ts`.
+- [x] The migration and the test SQL were checked for syntax with the PostgreSQL parser (libpg-query 17), including every function body. Names and types are only checked when the migration runs on a real database.

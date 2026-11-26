@@ -131,3 +131,14 @@ One line per decision, grouped by part.
 - Automatic anonymizing runs when the app loads (mock only); the clock starts at the last membership's end date, or at registration if there is none.
 - "Send feedback" is in the sidebar and on More, for gym users only.
 - Placeholder prices: setup fee ₱1,500, annual discount 10% (0 to 50 allowed). Changing the billing cycle keeps the due date; the setup fee changes neither due date nor trial status.
+
+## Schema upgrade (migration 20261126000000, written, not applied)
+- One clean migration replaces `supabase/schema.sql`; no baseline, since nothing ran on a real project yet.
+- The browser only reads (RLS); every write is one database function per action, run in one transaction.
+- Suspended gym: the scanner keeps working; owner and staff can only read; the website shows a banner.
+- Staff see only today's payments and walk-ins, plus a member's latest payment through `member_latest_payment`. The owner sees everything.
+- Link mode adds the result `blocked` ("Card is lost or disabled"); it never re-enables a card.
+- Freeze: a frozen membership that has started denies entry whatever its end date; unfreezing moves the end date (and queued renewals) forward by the days frozen.
+- Scanner tokens are made on the server: 24 random bytes as hex, stored only as SHA-256 lowercase hex (same as `index.ts`).
+- Heartbeat every 2 minutes; offline after 5 minutes; the pending-link hint (#12) is best effort.
+- Owner invites and photo cleanup come later (see schema-todo.md).
